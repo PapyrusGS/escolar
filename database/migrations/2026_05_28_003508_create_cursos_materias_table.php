@@ -21,20 +21,20 @@ return new class extends Migration
             $table->foreignId('IdMateria')
                   ->constrained('materias', 'IdMateria');
 
-            // Apunta a la tabla usuarios usando la columna IdUsuario
             $table->foreignId('IdDocente')
                   ->constrained('usuarios', 'IdUsuario');
 
             $table->foreignId('IdTurno')
                   ->constrained('turnos', 'IdTurno');
 
-            // Fechas operativas y campos adicionales
+            // Fechas y contadores
             $table->dateTime('FechaInicio'); // DATETIME NOT NULL
             $table->dateTime('FechaFin'); // DATETIME NOT NULL
             $table->integer('MaxInscritos')->default(40); // INT NOT NULL DEFAULT 40
+            $table->integer('Inscritos')->default(0); // INT NOT NULL DEFAULT 0
             
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE
         });
     }
 

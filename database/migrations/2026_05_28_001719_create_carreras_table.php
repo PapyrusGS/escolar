@@ -9,19 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+    public function up(): void
     {
         Schema::create('carreras', function (Blueprint $table) {
             $table->id('IdCarrera'); // INT AUTO_INCREMENT PRIMARY KEY
-            
-            // Llave foránea conectada con la tabla 'modalidad'
-            $table->foreignId('IdModalidad')
-                  ->constrained('modalidad', 'IdModalidad'); 
-                  
             $table->string('Nombre', 100); // VARCHAR(100) NOT NULL
-            $table->string('Descripcion', 255)->nullable(); // VARCHAR(255)
+            $table->string('Descripcion', 255)->nullable(); // VARCHAR(255) (Permite nulos)
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE (Mapeado como boolean)
         });
     }
 

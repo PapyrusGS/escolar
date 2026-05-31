@@ -28,11 +28,7 @@ return new class extends Migration
             $table->string('Contrasena', 255); // VARCHAR(255) NOT NULL
             
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            
-            // Llave foránea hacia la tabla Carreras (Opcional)
-            $table->foreignId('IdCarrera') ->nullable() ->constrained('carreras', 'IdCarrera');
-
-            $table->integer('Semestre')->nullable(); // INT NULL
+                
             $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
         });
     }

@@ -9,16 +9,25 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+    public function up(): void
     {
         Schema::create('turnos', function (Blueprint $table) {
             $table->id('IdTurno'); // INT AUTO_INCREMENT PRIMARY KEY
             $table->string('Nombre', 50); // VARCHAR(50) NOT NULL
             $table->time('HoraInicio'); // TIME NOT NULL
             $table->time('HoraFin'); // TIME NOT NULL
-            $table->string('Dias', 100); // VARCHAR(100) NOT NULL
+            
+            // Días de la semana (Campos bit NOT NULL mapeados como booleanos)
+            $table->boolean('Lun');
+            $table->boolean('Mar');
+            $table->boolean('Mie');
+            $table->boolean('Jue');
+            $table->boolean('Vie');
+            $table->boolean('Sab');
+            $table->boolean('Dom');
+            
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE
         });
     }
 

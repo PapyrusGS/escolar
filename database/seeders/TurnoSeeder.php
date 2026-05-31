@@ -11,24 +11,30 @@ class TurnoSeeder extends Seeder
     {
         DB::table('turnos')->insert([
             [
-                'Nombre' => 'Manana',
-                'HoraInicio' => '07:00:00',
+                'Nombre' => 'Mañana',
+                'HoraInicio' => '08:00:00',
                 'HoraFin' => '12:00:00',
-                'Dias' => 'Lunes,Martes,Miercoles,Jueves,Viernes',
+                'Lun' => true, 'Mar' => true, 'Mie' => true, 'Jue' => true, 'Vie' => true,
+                'Sab' => false, 'Dom' => false,
+                'FechaRegistro' => now(),
                 'Estado' => true
             ],
             [
                 'Nombre' => 'Tarde',
                 'HoraInicio' => '13:00:00',
-                'HoraFin' => '18:00:00',
-                'Dias' => 'Lunes,Martes,Miercoles,Jueves,Viernes',
+                'HoraFin' => '17:00:00',
+                'Lun' => true, 'Mar' => true, 'Mie' => true, 'Jue' => true, 'Vie' => true,
+                'Sab' => false, 'Dom' => false,
+                'FechaRegistro' => now(),
                 'Estado' => true
             ],
             [
                 'Nombre' => 'Noche',
-                'HoraInicio' => '19:00:00',
+                'HoraInicio' => '18:00:00',
                 'HoraFin' => '22:00:00',
-                'Dias' => 'Lunes,Martes,Miercoles,Jueves,Viernes',
+                'Lun' => true, 'Mar' => true, 'Mie' => true, 'Jue' => true, 'Vie' => true,
+                'Sab' => false, 'Dom' => false,
+                'FechaRegistro' => now(),
                 'Estado' => true
             ],
         ]);

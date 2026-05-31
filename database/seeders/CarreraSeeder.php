@@ -10,11 +10,11 @@ class CarreraSeeder extends Seeder
     public function run(): void
     {
         DB::table('carreras')->insert([
-            ['IdModalidad' => 1, 'Nombre' => 'Ingenieria de Sistemas', 'Descripcion' => 'Carrera de tecnologia e informatica', 'Estado' => true],
-            ['IdModalidad' => 2, 'Nombre' => 'Contaduria Publica', 'Descripcion' => 'Carrera de ciencias economicas', 'Estado' => true],
-            ['IdModalidad' => 1, 'Nombre' => 'Diseno Grafico', 'Descripcion' => 'Carrera de artes visuales y comunicacion', 'Estado' => true],
-            ['IdModalidad' => 2, 'Nombre' => 'Administracion', 'Descripcion' => 'Carrera de gestion empresarial', 'Estado' => true],
-            ['IdModalidad' => 3, 'Nombre' => 'Derecho', 'Descripcion' => 'Carrera de ciencias juridicas', 'Estado' => true],
+            ['Nombre' => 'Ingenieria de Sistemas', 'Descripcion' => 'Carrera de tecnologia e informatica', 'FechaRegistro' => now(), 'Estado' => true],
+            ['Nombre' => 'Contaduria Publica', 'Descripcion' => 'Carrera de ciencias economicas', 'FechaRegistro' => now(), 'Estado' => true],
+            ['Nombre' => 'Diseno Grafico', 'Descripcion' => 'Carrera de artes visuales y comunicacion', 'FechaRegistro' => now(), 'Estado' => true],
+            ['Nombre' => 'Administracion', 'Descripcion' => 'Carrera de gestion empresarial', 'FechaRegistro' => now(), 'Estado' => true],
+            ['Nombre' => 'Derecho', 'Descripcion' => 'Carrera de ciencias juridicas', 'FechaRegistro' => now(), 'Estado' => true],
         ]);
     }
 }

@@ -10,9 +10,27 @@ class ModalidadSeeder extends Seeder
     public function run(): void
     {
         DB::table('modalidad')->insert([
-            ['Nombre' => 'Modular', 'DuracionSemanas' => 4, 'MaxMaterias' => 2, 'Estado' => true],
-            ['Nombre' => 'Semestral', 'DuracionSemanas' => 24, 'MaxMaterias' => 6, 'Estado' => true],
-            ['Nombre' => 'Anual', 'DuracionSemanas' => 48, 'MaxMaterias' => 10, 'Estado' => true],
+            [
+                'Nombre' => 'Modular',
+                'DuracionSemanasxMaterias' => 4,
+                'MaxMaterias' => 2,
+                'FechaRegistro' => now(),
+                'Estado' => true
+            ],
+            [
+                'Nombre' => 'Semestral',
+                'DuracionSemanasxMaterias' => 24,
+                'MaxMaterias' => 6,
+                'FechaRegistro' => now(),
+                'Estado' => true
+            ],
+            [
+                'Nombre' => 'Anual',
+                'DuracionSemanasxMaterias' => 48,
+                'MaxMaterias' => 10,
+                'FechaRegistro' => now(),
+                'Estado' => true
+            ],
         ]);
     }
 }

@@ -14,19 +14,15 @@ return new class extends Migration
         Schema::create('notas', function (Blueprint $table) {
             $table->id('IdNota'); // INT AUTO_INCREMENT PRIMARY KEY
             
-            // Llave foránea hacia Usuarios (mapeado como IdEstudiante)
-            $table->foreignId('IdEstudiante')
-                  ->constrained('usuarios', 'IdUsuario');
+            // Llave foránea hacia la tabla Inscripciones
+            $table->foreignId('IdInscripcion')
+                  ->constrained('inscripciones', 'IdInscripcion');
 
-            // Llave foránea hacia CursosMaterias
-            $table->foreignId('IdCursoMateria')
-                  ->constrained('cursos_materias', 'IdCursoMateria');
-
-            // Campo Decimal: (Nombre de columna, Total de dígitos, Dígitos decimales)
+            // Campo Decimal para la calificación (Total de dígitos, Dígitos decimales)
             $table->decimal('Nota', 5, 2); // DECIMAL(5,2) NOT NULL
             
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE (Mapeado como boolean)
         });
     }
 

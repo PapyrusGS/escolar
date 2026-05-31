@@ -9,23 +9,22 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+    public function up(): void
     {
         Schema::create('materias', function (Blueprint $table) {
             $table->id('IdMateria'); // INT AUTO_INCREMENT PRIMARY KEY
             
-            // Llave foránea hacia la tabla Carreras (Obligatoria)
-            $table->foreignId('IdCarrera')
-                  ->constrained('carreras', 'IdCarrera');
-            
-            // Llave foránea auto-referenciada para la materia previa (Opcional/Nullable)
+            // Llave foránea auto-referenciada (Opcional porque no todas tienen prerrequisito)
             $table->foreignId('IdMateriaPrevia')
-                  ->nullable() // Permite nulos porque no todas las materias tienen prerrequisito
+                  ->nullable()
                   ->constrained('materias', 'IdMateria');
 
+            $table->string('CodigoMateria', 20)->unique(); // VARCHAR(20) NOT NULL UNIQUE
             $table->string('Nombre', 100); // VARCHAR(100) NOT NULL
+            $table->string('Descripcion', 255)->nullable(); // VARCHAR(255) (Permite nulos)
+            
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE
         });
     }
 

@@ -10,10 +10,10 @@ class CursoSeeder extends Seeder
     public function run(): void
     {
         DB::table('cursos')->insert([
-            ['Nombre' => 'Curso 1', 'Descripcion' => 'Primer curso académico', 'Estado' => true],
-            ['Nombre' => 'Curso 2', 'Descripcion' => 'Segundo curso académico', 'Estado' => true],
-            ['Nombre' => 'Curso 3', 'Descripcion' => 'Tercer curso académico', 'Estado' => true],
-            ['Nombre' => 'Curso 4', 'Descripcion' => 'Cuarto curso académico', 'Estado' => true],
+            ['Piso' => 1, 'Aula' => 'Aula 101'],
+            ['Piso' => 1, 'Aula' => 'Aula 102'],
+            ['Piso' => 2, 'Aula' => 'Aula 201'],
+            ['Piso' => 2, 'Aula' => 'Aula 202'],
         ]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -22,7 +21,9 @@ class DatabaseSeeder extends Seeder
             CarreraSeeder::class,
             MateriaSeeder::class,
             PensumSeeder::class,
+            CarreraMateriaPensumSeeder::class,
             UsuarioSeeder::class,
+            EstudianteCarreraSeeder::class,
             CursoSeeder::class,
             CursoMateriaSeeder::class,
             InscripcionSeeder::class,

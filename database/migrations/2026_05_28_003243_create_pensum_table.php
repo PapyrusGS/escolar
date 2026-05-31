@@ -9,21 +9,21 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+    public function up(): void
     {
         Schema::create('pensum', function (Blueprint $table) {
             $table->id('IdPensum'); // INT AUTO_INCREMENT PRIMARY KEY
             
-            // Llave foránea hacia la tabla Carreras
-            $table->foreignId('IdCarrera')
-                  ->constrained('carreras', 'IdCarrera');
+            // Llave foránea hacia la tabla Modalidad (Obligatoria)
+            $table->foreignId('IdModalidad')
+                  ->constrained('modalidad', 'IdModalidad');
 
-            // Llave foránea hacia la tabla Materias
-            $table->foreignId('IdMateria')
-                  ->constrained('materias', 'IdMateria');
-
+            $table->string('Nombre', 100); // VARCHAR(100) NOT NULL
+            $table->integer('NumMaterias'); // INT NOT NULL
+            $table->integer('NumSemestres'); // INT NOT NULL
+            
             $table->timestamp('FechaRegistro')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
-            $table->boolean('Estado')->default(true); // BOOL DEFAULT TRUE
+            $table->boolean('Estado')->default(true); // bit DEFAULT TRUE
         });
     }
 
