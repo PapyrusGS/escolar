@@ -1,241 +1,207 @@
 <template>
-  <section class="create-form">
-    <header class="topbar">
+  <section class="page">
+    <header class="page__header">
       <div>
         <p class="eyebrow">RF01</p>
         <h1>Registro de usuarios</h1>
-        <p class="lead">{{ roleName || 'Solo administradores pueden registrar usuarios.' }}</p>
+        <p class="lead">Alta de nuevos usuarios con selección de rol y validación de datos.</p>
       </div>
-      <button class="back" type="button" @click="goBack">Volver al panel</button>
+      <a class="back-link" href="/index">Volver al panel</a>
     </header>
 
-    <div v-if="message" class="alert" :class="alertClass">{{ message }}</div>
+    <div v-if="message" :class="['alert', messageType === 'success' ? 'alert--success' : 'alert--error']">
+      {{ message }}
+    </div>
 
     <form class="panel" @submit.prevent="submit">
       <div class="grid">
-        <label>
-          Rol
-          <select v-model="form.IdRol" required>
-            <option disabled value="">Selecciona un rol</option>
+        <label class="field">
+          <span>Rol</span>
+          <select v-model="form.IdRol" class="input">
+            <option value="">Seleccione un rol</option>
             <option v-for="role in roles" :key="role.IdRol" :value="role.IdRol">
               {{ role.Nombre }}
             </option>
           </select>
+          <small v-if="errors.IdRol" class="error">{{ errors.IdRol[0] }}</small>
         </label>
 
-        <label>
-          Estado
-          <select v-model="form.Estado" required>
-            <option :value="true">Activo</option>
-            <option :value="false">Inactivo</option>
-          </select>
+        <label class="field">
+          <span>Correo</span>
+          <input v-model="form.Correo" class="input" type="email">
+          <small v-if="errors.Correo" class="error">{{ errors.Correo[0] }}</small>
         </label>
 
-        <label>
-          Primer nombre
-          <input v-model="form.Nombre1" type="text" maxlength="50" required />
+        <label class="field">
+          <span>CI</span>
+          <input v-model="form.CI" class="input" type="number">
+          <small v-if="errors.CI" class="error">{{ errors.CI[0] }}</small>
         </label>
 
-        <label>
-          Segundo nombre
-          <input v-model="form.Nombre2" type="text" maxlength="50" />
+        <label class="field">
+          <span>Teléfono</span>
+          <input v-model="form.Telefono" class="input" type="number">
+          <small v-if="errors.Telefono" class="error">{{ errors.Telefono[0] }}</small>
         </label>
 
-        <label>
-          Primer apellido
-          <input v-model="form.Apellido1" type="text" maxlength="50" required />
+        <label class="field">
+          <span>Nombre 1</span>
+          <input v-model="form.Nombre1" class="input" type="text">
+          <small v-if="errors.Nombre1" class="error">{{ errors.Nombre1[0] }}</small>
         </label>
 
-        <label>
-          Segundo apellido
-          <input v-model="form.Apellido2" type="text" maxlength="50" />
+        <label class="field">
+          <span>Nombre 2</span>
+          <input v-model="form.Nombre2" class="input" type="text">
         </label>
 
-        <label>
-          CI
-          <input v-model="form.CI" type="number" required />
+        <label class="field">
+          <span>Apellido 1</span>
+          <input v-model="form.Apellido1" class="input" type="text">
+          <small v-if="errors.Apellido1" class="error">{{ errors.Apellido1[0] }}</small>
         </label>
 
-        <label>
-          Teléfono
-          <input v-model="form.Telefono" type="number" />
+        <label class="field">
+          <span>Apellido 2</span>
+          <input v-model="form.Apellido2" class="input" type="text">
         </label>
 
-        <label>
-          Correo
-          <input v-model="form.Correo" type="email" required />
+        <label class="field">
+          <span>Contraseña</span>
+          <input v-model="form.Contrasena" class="input" type="password">
+          <small v-if="errors.Contrasena" class="error">{{ errors.Contrasena[0] }}</small>
         </label>
 
-        <label>
-          Contraseña
-          <input v-model="form.Contrasena" type="password" minlength="6" required />
+        <label class="field">
+          <span>Confirmar contraseña</span>
+          <input v-model="form.Contrasena_confirmation" class="input" type="password">
         </label>
 
-        <label>
-          Confirmar contraseña
-          <input v-model="form.Contrasena_confirmation" type="password" minlength="6" required />
-        </label>
-
-        <label>
-          Carrera
-          <input v-model="form.IdCarrera" type="number" placeholder="Opcional según el rol" />
-        </label>
-
-        <label>
-          Semestre
-          <input v-model="form.Semestre" type="number" placeholder="Opcional según el rol" />
+        <label class="field field--full">
+          <span class="checkbox">
+            <input v-model="form.Estado" type="checkbox">
+            Usuario activo
+          </span>
         </label>
       </div>
 
-      <button class="submit" type="submit" :disabled="loading">
-        {{ loading ? 'Registrando...' : 'Registrar usuario' }}
-      </button>
+      <div class="actions">
+        <button class="button" type="submit" :disabled="loading">
+          {{ loading ? 'Registrando...' : 'Registrar usuario' }}
+        </button>
+        <button class="button button--ghost" type="button" @click="resetForm" :disabled="loading">Limpiar</button>
+      </div>
     </form>
   </section>
 </template>
 
 <script>
-import { computed, onMounted, reactive, ref } from 'vue';
 import axios from 'axios';
 
 export default {
   name: 'UserCreateForm',
-  setup() {
-    const loading = ref(false);
-    const message = ref('');
-    const messageType = ref('success');
-    const roles = ref([]);
-    const roleName = ref('');
-
-    const form = reactive({
-      IdRol: '',
-      Nombre1: '',
-      Nombre2: '',
-      Apellido1: '',
-      Apellido2: '',
-      CI: '',
-      Telefono: '',
-      Correo: '',
-      Contrasena: '',
-      Contrasena_confirmation: '',
-      IdCarrera: '',
-      Semestre: '',
-      Estado: true,
-    });
-
-    const alertClass = computed(() => messageType.value === 'success' ? 'alert--success' : 'alert--error');
-
-    const goBack = () => {
-      window.location.href = '/index';
+  data() {
+    return {
+      loading: false,
+      roles: [],
+      errors: {},
+      message: '',
+      messageType: 'success',
+      form: {
+        IdRol: '',
+        Nombre1: '',
+        Nombre2: '',
+        Apellido1: '',
+        Apellido2: '',
+        CI: '',
+        Telefono: '',
+        Correo: '',
+        Contrasena: '',
+        Contrasena_confirmation: '',
+        Estado: true,
+      },
     };
+  },
+  mounted() {
+    const token = localStorage.getItem('auth_token');
 
-    const loadProfile = async () => {
-      const token = localStorage.getItem('auth_token');
+    if (!token) {
+      window.location.href = '/';
+      return;
+    }
 
-      if (!token) {
-        window.location.href = '/';
-        return false;
-      }
-
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-
-      const response = await axios.get('/api/auth/perfil');
-      const user = response.data.data.user;
-
-      if (user?.IdRol !== 1) {
-        messageType.value = 'error';
-        message.value = 'No tienes permisos para registrar usuarios.';
-        setTimeout(() => {
-          window.location.href = '/index';
-        }, 1500);
-        return false;
-      }
-
-      roleName.value = user?.Rol?.Nombre || 'Administrador';
-      return true;
-    };
-
-    const loadRoles = async () => {
-      const response = await axios.get('/api/usuarios/form-data');
-      roles.value = response.data.data.roles;
-    };
-
-    onMounted(async () => {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    this.loadFormData();
+  },
+  methods: {
+    async loadFormData() {
       try {
-        const ok = await loadProfile();
-        if (!ok) return;
-        await loadRoles();
+        const response = await axios.get('/api/usuarios/form-data');
+        this.roles = response.data.data.roles || [];
       } catch (error) {
         console.error(error);
-        messageType.value = 'error';
-        message.value = error.response?.data?.message ?? 'No se pudieron cargar los datos del formulario.';
+        this.message = error.response?.data?.message || 'No se pudo cargar el formulario.';
+        this.messageType = 'error';
       }
-    });
-
-    const submit = async () => {
+    },
+    async submit() {
       try {
-        loading.value = true;
-        message.value = '';
+        this.loading = true;
+        this.errors = {};
+        this.message = '';
 
         const payload = {
-          ...form,
-          IdRol: Number(form.IdRol),
-          CI: Number(form.CI),
-          Telefono: form.Telefono ? Number(form.Telefono) : null,
-          IdCarrera: form.IdCarrera ? Number(form.IdCarrera) : null,
-          Semestre: form.Semestre ? Number(form.Semestre) : null,
-          Estado: Boolean(form.Estado),
+          ...this.form,
+          IdRol: Number(this.form.IdRol),
+          CI: this.form.CI ? Number(this.form.CI) : '',
+          Telefono: this.form.Telefono ? Number(this.form.Telefono) : null,
         };
 
         const response = await axios.post('/api/usuarios', payload);
-
-        messageType.value = 'success';
-        message.value = response.data.message;
-
-        form.IdRol = '';
-        form.Nombre1 = '';
-        form.Nombre2 = '';
-        form.Apellido1 = '';
-        form.Apellido2 = '';
-        form.CI = '';
-        form.Telefono = '';
-        form.Correo = '';
-        form.Contrasena = '';
-        form.Contrasena_confirmation = '';
-        form.IdCarrera = '';
-        form.Semestre = '';
-        form.Estado = true;
+        this.message = response.data.message || 'Usuario registrado correctamente.';
+        this.messageType = 'success';
+        this.resetForm(false);
       } catch (error) {
         console.error(error);
-        messageType.value = 'error';
-        message.value = error.response?.data?.message ?? 'No se pudo registrar el usuario.';
+        this.message = error.response?.data?.message || 'No se pudo registrar el usuario.';
+        this.messageType = 'error';
+        this.errors = error.response?.data?.data || {};
       } finally {
-        loading.value = false;
+        this.loading = false;
       }
-    };
+    },
+    resetForm(clearMessage = true) {
+      this.form = {
+        IdRol: '',
+        Nombre1: '',
+        Nombre2: '',
+        Apellido1: '',
+        Apellido2: '',
+        CI: '',
+        Telefono: '',
+        Correo: '',
+        Contrasena: '',
+        Contrasena_confirmation: '',
+        Estado: true,
+      };
 
-    return {
-      form,
-      roles,
-      roleName,
-      loading,
-      message,
-      alertClass,
-      submit,
-      goBack,
-    };
+      if (clearMessage) {
+        this.message = '';
+        this.errors = {};
+      }
+    },
   },
 };
 </script>
 
 <style scoped>
-.create-form {
+.page {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
   color: #e5e7eb;
 }
 
-.topbar {
+.page__header {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
@@ -250,77 +216,108 @@ export default {
   color: #fbbf24;
 }
 
-h1 {
+h1, p {
   margin: 0;
-  font-size: 1.9rem;
+}
+
+h1 {
+  font-size: 2rem;
 }
 
 .lead {
-  margin: 0.5rem 0 0;
+  margin-top: 0.5rem;
   color: #cbd5e1;
 }
 
-.back,
-.submit {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.9rem 1.2rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.back {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
-}
-
-.submit {
-  background: linear-gradient(135deg, #f97316, #fbbf24);
+.back-link {
+  align-self: center;
+  text-decoration: none;
   color: #111827;
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+  font-weight: 700;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+}
+
+.alert {
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  font-weight: 600;
+}
+
+.alert--success {
+  background: rgba(16, 185, 129, 0.16);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.alert--error {
+  background: rgba(239, 68, 68, 0.16);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .panel {
-  padding: 1.25rem;
-  border-radius: 22px;
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  border-radius: 20px;
+  padding: 1rem;
 }
 
 .grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  margin-bottom: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
-label {
+.field {
   display: grid;
-  gap: 0.4rem;
-  font-size: 0.95rem;
+  gap: 0.35rem;
 }
 
-input,
-select {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+.field--full {
+  grid-column: 1 / -1;
+}
+
+.checkbox {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.input,
+.button {
   border-radius: 14px;
-  padding: 0.85rem 0.95rem;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: #e5e7eb;
+  padding: 0.85rem 1rem;
 }
 
-.alert {
-  padding: 0.9rem 1rem;
-  border-radius: 14px;
+.button {
+  cursor: pointer;
+  font-weight: 700;
 }
 
-.alert--success {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
+.button--ghost {
+  background: transparent;
 }
 
-.alert--error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #fca5a5;
+}
+
+@media (max-width: 900px) {
+  .page__header,
+  .grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
 }
 </style>

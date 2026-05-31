@@ -14,7 +14,6 @@
                 radial-gradient(circle at top right, rgba(251, 191, 36, 0.22), transparent 26%),
                 linear-gradient(135deg, #0f172a, #111827 55%, #1f2937);
         }
-
         .shell {
             width: min(96vw, 1100px);
             margin: 0 auto;

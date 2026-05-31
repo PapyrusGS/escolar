@@ -11,7 +11,7 @@ class RolRepository
     {
         return Rol::query()
             ->where('Estado', true)
-            ->orderBy('Nombre')
+            ->orderBy('IdRol')
             ->get();
     }
 }
