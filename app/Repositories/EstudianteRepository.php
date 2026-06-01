@@ -13,6 +13,8 @@ class EstudianteRepository
     {
         return DB::table('usuarios')
             ->join('roles', 'usuarios.IdRol', '=', 'roles.IdRol')
+            ->join('estudiantecarrera', 'usuarios.IdUsuario', '=', 'estudiantecarrera.IdUsuario')
+            ->join('modalidad', 'estudiantecarrera.IdModalidad', '=', 'modalidad.IdModalidad')
             ->where('usuarios.IdUsuario', $idUsuario)
             ->select(
                 'usuarios.IdUsuario',
@@ -23,7 +25,8 @@ class EstudianteRepository
                 'usuarios.Correo',
                 'usuarios.CI',
                 'usuarios.Telefono',
-                'roles.Nombre as Rol'
+                'roles.Nombre as Rol',
+                'modalidad.Nombre as Modalidad'
             )
             ->first();
     }
@@ -43,5 +46,46 @@ class EstudianteRepository
             ->where('IdUsuario', $idUsuario)
             ->select('IdUsuario', 'Nombre1', 'Nombre2', 'Apellido1', 'Apellido2', 'Correo', 'Telefono', 'CI')
             ->first();
+    }
+
+    /**
+     * Trae los cursos activos en los que el estudiante NO figura todavía
+     */
+    public function getCursosNoInscritos(int $idUsuario)
+    {
+        // 1. Conseguimos los IDs de los cursos donde Pedro YA está inscrito
+        $cursosInscritosIds = DB::table('inscripciones')
+            ->where('IdUsuario', $idUsuario)
+            ->pluck('IdCurso');
+
+        // 2. Traemos todos los cursos EXCEPTUANDO los de la lista anterior
+        return DB::table('cursos')
+            ->whereNotIn('IdCurso', $cursosInscritosIds)
+            ->where('Estado', true) // Asumiendo columna Estado = true para cursos activos
+            ->select('IdCurso', 'Nombre', 'Descripcion') 
+            ->get();
+    }
+
+    /**
+     * Revisa si ya existe la fila en la tabla intermedia
+     */
+    public function verificarInscripcionExistente(int $idUsuario, int $idCurso): bool
+    {
+        return DB::table('inscripciones')
+            ->where('IdUsuario', $idUsuario)
+            ->where('IdCurso', $idCurso)
+            ->exists();
+    }
+
+    /**
+     * Inserta manualmente la inscripción respetando la falta de timestamps
+     */
+    public function registrarInscripcion(int $idUsuario, int $idCurso): bool
+    {
+        return DB::table('inscripciones')->insert([
+            'IdUsuario' => $idUsuario,
+            'IdCurso'   => $idCurso,
+            'FechaInscripcion' => now() // Si usas esta columna en tu DB, si no, bórrala
+        ]);
     }
 }
