@@ -143,12 +143,12 @@ INSERT INTO Usuarios (IdRol, Nombre1, Nombre2, Apellido1, Apellido2, CI, Telefon
 (2, 'Roberto',  'Cesar',   'Villena',   'Tapia',   22110099,  72334455, 'roberto@gmail.com',      SHA2('123', 256));
 
 
-Insert INTO EstudianteCarrera (IdUsuario, IdCarrera) VALUES
-(3, 1),  -- Maria Flores -> Ingenieria de Sistemas
-(6, 1),  -- Kike Torrez -> Ingenieria de Sistemas
-(7, 1),  -- Ana Condori -> Ingenieria de Sistemas
-(8, 1),  -- Pedro Vargas -> Ingenieria de Sistemas
-(9, 1);  -- Lucia Rios -> Ingenieria de Sistemas
+Insert INTO EstudianteCarrera (IdUsuario, IdCarrera, IdModalidad) VALUES
+(3, 1, 1),  -- Maria Flores -> Ingenieria de Sistemas
+(6, 1, 1),  -- Kike Torrez -> Ingenieria de Sistemas
+(7, 1, 1),  -- Ana Condori -> Ingenieria de Sistemas
+(8, 1, 1),  -- Pedro Vargas -> Ingenieria de Sistemas
+(9, 1, 1);  -- Lucia Rios -> Ingenieria de Sistemas
 
 
 Insert Into Cursos (Piso, Aula) VALUES

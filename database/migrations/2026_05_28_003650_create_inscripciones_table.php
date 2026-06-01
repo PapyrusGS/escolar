@@ -24,6 +24,7 @@ return new class extends Migration
 
             $table->timestamp('Fecha')->useCurrent(); // DATETIME DEFAULT CURRENT_TIMESTAMP
             $table->boolean('Estado')->default(true); // bit DEFAULT TRUE (Mapeado como boolean)
+            $table->boolean('Aprobado')->default(false); // bit DEFAULT FALSE (Mapeado como boolean); // created_at y updated_at
         });
     }
 

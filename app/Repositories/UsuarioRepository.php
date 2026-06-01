@@ -25,4 +25,12 @@ class UsuarioRepository
             ->where('Correo', $data['Correo'])
             ->firstOrFail();
     }
+
+    public function findById(int $id): ?User
+    {
+        return User::query()
+            ->with('rol')
+            ->where('IdUsuario', $id)
+            ->first();
+    }
 }

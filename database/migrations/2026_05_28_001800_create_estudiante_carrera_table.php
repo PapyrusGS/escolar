@@ -14,6 +14,8 @@ return new class extends Migration
                 ->constrained('usuarios', 'IdUsuario');
             $table->foreignId('IdCarrera')
                 ->constrained('carreras', 'IdCarrera');
+            $table->foreignId('IdModalidad')
+                ->constrained('modalidad', 'IdModalidad');
             $table->timestamp('FechaRegistro')->useCurrent();
             $table->boolean('Estado')->default(true);
         });

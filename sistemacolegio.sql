@@ -123,10 +123,12 @@ Create table EstudianteCarrera(
     IdEstudianteCarrera INT AUTO_INCREMENT PRIMARY KEY,
     IdUsuario INT NOT NULL,
     IdCarrera INT NOT NULL,
+    IdModalidad INT NOT NULL,
     FechaRegistro DATETIME DEFAULT CURRENT_TIMESTAMP,
     Estado bit DEFAULT TRUE,
     FOREIGN KEY (IdUsuario) REFERENCES Usuarios(IdUsuario),
-    FOREIGN KEY (IdCarrera) REFERENCES Carreras(IdCarrera)
+    FOREIGN KEY (IdCarrera) REFERENCES Carreras(IdCarrera),
+    FOREIGN KEY (IdModalidad) REFERENCES Modalidad(IdModalidad)
 );
 
 CREATE TABLE Inscripciones (
