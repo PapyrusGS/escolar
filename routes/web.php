@@ -17,3 +17,7 @@ Route::get('/usuarios/create', function () {
 Route::get('/usuarios', function () {
     return view('usuarios.index');
 });
+
+Route::get('/perfil', function () {
+    return view('perfil');
+});

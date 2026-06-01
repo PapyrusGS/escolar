@@ -10,6 +10,8 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/perfil', [AuthController::class, 'profile']);
+        Route::put('/perfil', [AuthController::class, 'updateProfile']);
+        Route::put('/contrasena', [AuthController::class, 'changePassword']);
     });
 });
 
