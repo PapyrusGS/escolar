@@ -1,8 +1,8 @@
 <template>
   <section class="dashboard-panel">
     
-    <!-- Cabecera del Panel -->
-    <header class="dashboard-panel__header">
+    <!-- Cabecera del Panel (Se oculta al imprimir reportes en PDF) -->
+    <header class="dashboard-panel__header no-print">
       <div class="user-welcome">
         <div class="avatar-circle">
           {{ userInitials }}
@@ -14,134 +14,168 @@
         </div>
       </div>
       <div class="header-actions">
+        <!-- Navegación interactiva rápida para el Admin si no está en resumen -->
+        <button v-if="activeTab !== 'summary'" class="btn-action btn-action--secondary" @click="activeTab = 'summary'">
+          📊 Ir al Panel Principal
+        </button>
         <a class="btn-action btn-action--secondary" href="/index">Volver al Panel</a>
         <a class="btn-action btn-action--primary" href="/perfil">Mi Perfil</a>
       </div>
     </header>
 
     <!-- Estado de Carga -->
-    <div v-if="loading" class="loading-state">
+    <div v-if="loading" class="loading-state no-print">
       <div class="spinner"></div>
       <p>Cargando tus estadísticas y actividades recientes...</p>
     </div>
 
     <div v-else class="dashboard-content">
       
-      <!-- Fila 1: Resumen de Métricas (Stats Cards) -->
-      <div class="stats-grid">
-        <div 
-          v-for="(stat, idx) in dashboardData.resumen" 
-          :key="idx" 
-          class="stat-card"
-          :style="{ background: stat.gradiente }"
-        >
-          <div class="stat-card__overlay">
-            <span class="stat-card__icon">{{ stat.icono }}</span>
-            <div class="stat-card__info">
-              <span class="stat-card__label">{{ stat.titulo }}</span>
-              <strong class="stat-card__value">{{ stat.valor }}</strong>
+      <!-- Banner de Navegación de Regreso para Reportes/Notificaciones (no imprimible) -->
+      <div v-if="activeTab !== 'summary'" class="tab-back-banner no-print">
+        <button class="back-tab-btn" @click="activeTab = 'summary'">
+          ⬅ Volver al Resumen General
+        </button>
+      </div>
+
+      <!-- VISTA 1: Resumen General (Métricas + Timeline + Accesos Rápidos) -->
+      <div v-if="activeTab === 'summary'">
+        
+        <!-- Fila 1: Resumen de Métricas (Stats Cards) -->
+        <div class="stats-grid">
+          <div 
+            v-for="(stat, idx) in dashboardData.resumen" 
+            :key="idx" 
+            class="stat-card"
+            :style="{ background: stat.gradiente }"
+          >
+            <div class="stat-card__overlay">
+              <span class="stat-card__icon">{{ stat.icono }}</span>
+              <div class="stat-card__info">
+                <span class="stat-card__label">{{ stat.titulo }}</span>
+                <strong class="stat-card__value">{{ stat.valor }}</strong>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- Fila 2: Actividades e Información Relevante -->
+        <div class="main-grid">
+          
+          <!-- Columna Izquierda: Actividades Recientes -->
+          <div class="card card--timeline">
+            <div class="card__header">
+              <h3>⚡ Actividades Recientes</h3>
+              <span class="badge">Historial</span>
+            </div>
+            <div class="card__body">
+              <div v-if="!dashboardData.actividades || dashboardData.actividades.length === 0" class="empty-feed">
+                <p>No se registran actividades recientes en tu panel académico.</p>
+              </div>
+              
+              <ul v-else class="timeline">
+                <li 
+                  v-for="(act, index) in dashboardData.actividades" 
+                  :key="index" 
+                  class="timeline-item"
+                >
+                  <div class="timeline-badge" :class="`timeline-badge--${act.tipo}`">
+                    {{ getIconForType(act.tipo) }}
+                  </div>
+                  <div class="timeline-panel">
+                    <div class="timeline-heading">
+                      <h4>{{ act.titulo }}</h4>
+                      <span class="timeline-time">{{ formatDateTime(act.fecha) }}</span>
+                    </div>
+                    <p class="timeline-desc">{{ act.descripcion }}</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Información Relevante y Accesos Rápidos -->
+          <div class="sidebar-grid">
+            
+            <!-- Información Relevante -->
+            <div class="card card--info">
+              <div class="card__header">
+                <h3>ℹ️ Información Relevante</h3>
+              </div>
+              <div class="card__body">
+                <div class="info-block">
+                  <p class="info-msg">{{ dashboardData.info_relevante?.mensaje }}</p>
+                  <div class="info-alert">
+                    <span class="info-alert__icon">💡</span>
+                    <p class="info-alert__text">{{ dashboardData.info_relevante?.ayuda }}</p>
+                  </div>
+                </div>
+
+                <!-- Ficha de Perfil Rápida (Para Estudiantes) -->
+                <div v-if="user?.IdRol === 3" class="student-meta-box">
+                  <h4>Ficha Académica Activa</h4>
+                  <div class="meta-row">
+                    <span class="meta-label">Carrera:</span>
+                    <span class="meta-value text-warning">{{ academicCareer }}</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Modalidad:</span>
+                    <span class="meta-value text-info">{{ academicModalidad }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Accesos Rápidos -->
+            <div class="card card--shortcuts">
+              <div class="card__header">
+                <h3>🚀 Accesos Rápidos</h3>
+              </div>
+              <div class="card__body shortcuts-body">
+                <!-- Accesos Admin -->
+                <template v-if="user?.IdRol === 1">
+                  <!-- Módulos Nuevos en Botón Premium Interactivos -->
+                  <button @click="activeTab = 'notifications'" class="shortcut-btn shortcut-btn--highlight">
+                    🔔 Bandeja de Notificaciones
+                  </button>
+                  <button @click="activeTab = 'reports'" class="shortcut-btn shortcut-btn--highlight">
+                    📊 Reporte de Materias
+                  </button>
+                  
+                  <!-- Accesos Clásicos -->
+                  <a href="/usuarios/create" class="shortcut-btn">Registrar Usuario</a>
+                  <a href="/usuarios" class="shortcut-btn">Gestionar Usuarios</a>
+                  <a href="/cursos" class="shortcut-btn">Gestionar Cursos</a>
+                  <a href="/cursos/visualizacion" class="shortcut-btn">Ver Cursos por Usuario</a>
+                </template>
+
+                <!-- Accesos Docente -->
+                <template v-if="user?.IdRol === 2">
+                  <a href="/cursos/visualizacion" class="shortcut-btn">Ver Alumnos Inscritos</a>
+                  <a href="/perfil" class="shortcut-btn">Actualizar mis Datos</a>
+                </template>
+
+                <!-- Accesos Estudiante -->
+                <template v-if="user?.IdRol === 3">
+                  <a href="/inscripciones" class="shortcut-btn">Inscribirme a Cursos</a>
+                  <a href="/perfil" class="shortcut-btn">Cambiar Contraseña</a>
+                </template>
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
 
-      <!-- Fila 2: Actividades e Información Relevante (Layout de dos columnas) -->
-      <div class="main-grid">
-        
-        <!-- Columna Izquierda: Actividades Recientes -->
-        <div class="card card--timeline">
-          <div class="card__header">
-            <h3>⚡ Actividades Recientes</h3>
-            <span class="badge">Historial</span>
-          </div>
-          <div class="card__body">
-            <div v-if="!dashboardData.actividades || dashboardData.actividades.length === 0" class="empty-feed">
-              <p>No se registran actividades recientes en tu panel académico.</p>
-            </div>
-            
-            <ul v-else class="timeline">
-              <li 
-                v-for="(act, index) in dashboardData.actividades" 
-                :key="index" 
-                class="timeline-item"
-              >
-                <div class="timeline-badge" :class="`timeline-badge--${act.tipo}`">
-                  {{ getIconForType(act.tipo) }}
-                </div>
-                <div class="timeline-panel">
-                  <div class="timeline-heading">
-                    <h4>{{ act.titulo }}</h4>
-                    <span class="timeline-time">{{ formatDateTime(act.fecha) }}</span>
-                  </div>
-                  <p class="timeline-desc">{{ act.descripcion }}</p>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
+      <!-- VISTA 2: Bandeja de Notificaciones (Diseño Todo-List) -->
+      <div v-else-if="activeTab === 'notifications'">
+        <AdminNotificacion :userRole="user?.IdRol || 1" />
+      </div>
 
-        <!-- Columna Derecha: Información Relevante y Accesos Rápidos -->
-        <div class="sidebar-grid">
-          
-          <!-- Información Relevante -->
-          <div class="card card--info">
-            <div class="card__header">
-              <h3>ℹ️ Información Relevante</h3>
-            </div>
-            <div class="card__body">
-              <div class="info-block">
-                <p class="info-msg">{{ dashboardData.info_relevante?.mensaje }}</p>
-                <div class="info-alert">
-                  <span class="info-alert__icon">💡</span>
-                  <p class="info-alert__text">{{ dashboardData.info_relevante?.ayuda }}</p>
-                </div>
-              </div>
-
-              <!-- Ficha de Perfil Rápida (Para Estudiantes) -->
-              <div v-if="user?.IdRol === 3" class="student-meta-box">
-                <h4>Ficha Académica Activa</h4>
-                <div class="meta-row">
-                  <span class="meta-label">Carrera:</span>
-                  <span class="meta-value text-warning">{{ academicCareer }}</span>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-label">Modalidad:</span>
-                  <span class="meta-value text-info">{{ academicModalidad }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Accesos Rápidos -->
-          <div class="card card--shortcuts">
-            <div class="card__header">
-              <h3>🚀 Accesos Rápidos</h3>
-            </div>
-            <div class="card__body shortcuts-body">
-              <!-- Accesos Admin -->
-              <template v-if="user?.IdRol === 1">
-                <a href="/usuarios/create" class="shortcut-btn">Registrar Usuario</a>
-                <a href="/usuarios" class="shortcut-btn">Gestionar Usuarios</a>
-                <a href="/cursos" class="shortcut-btn">Gestionar Cursos</a>
-                <a href="/cursos/visualizacion" class="shortcut-btn">Ver Cursos por Usuario</a>
-              </template>
-
-              <!-- Accesos Docente -->
-              <template v-if="user?.IdRol === 2">
-                <a href="/cursos/visualizacion" class="shortcut-btn">Ver Alumnos Inscritos</a>
-                <a href="/perfil" class="shortcut-btn">Actualizar mis Datos</a>
-              </template>
-
-              <!-- Accesos Estudiante -->
-              <template v-if="user?.IdRol === 3">
-                <a href="/inscripciones" class="shortcut-btn">Inscribirme a Cursos</a>
-                <a href="/perfil" class="shortcut-btn">Cambiar Contraseña</a>
-              </template>
-            </div>
-          </div>
-
-        </div>
-
+      <!-- VISTA 3: Reporte de Materias por Carrera (Pattern Strategy + Excel + PDF) -->
+      <div v-else-if="activeTab === 'reports'">
+        <AdminReporte :user="user" />
       </div>
 
     </div>
@@ -151,12 +185,19 @@
 
 <script>
 import axios from 'axios';
+import AdminNotificacion from './AdminNotificacion.vue';
+import AdminReporte from './AdminReporte.vue';
 
 export default {
   name: 'Dashboard',
+  components: {
+    AdminNotificacion,
+    AdminReporte
+  },
   data() {
     return {
       user: null,
+      activeTab: 'summary', // summary, notifications, reports
       dashboardData: {
         rol: '',
         resumen: [],
@@ -270,6 +311,26 @@ h1 { margin: 0; font-size: 1.8rem; }
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 40px; }
 .spinner { width: 40px; height: 40px; border: 4px solid rgba(251, 191, 36, 0.1); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
 
+/* Banner navegación tab */
+.tab-back-banner {
+  margin-bottom: 20px;
+}
+.back-tab-btn {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+.back-tab-btn:hover {
+  background: #fbbf24;
+  color: #0f172a;
+}
+
 /* Grid de Métricas (Stats) */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 32px; }
 .stat-card { border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); transition: transform 0.25s; }
@@ -326,8 +387,18 @@ h1 { margin: 0; font-size: 1.8rem; }
 
 /* Accesos Rápidos */
 .shortcuts-body { display: flex; flex-direction: column; gap: 10px; }
-.shortcut-btn { display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(148, 163, 184, 0.15); color: #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.88rem; transition: all 0.2s; text-align: center; }
+.shortcut-btn { display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(148, 163, 184, 0.15); color: #cbd5e1; text-decoration: none; font-weight: 700; font-size: 0.88rem; transition: all 0.2s; text-align: center; cursor: pointer; }
 .shortcut-btn:hover { background: rgba(251, 191, 36, 0.08); border-color: #fbbf24; color: #fbbf24; }
+
+.shortcut-btn--highlight {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+.shortcut-btn--highlight:hover {
+  background: #fbbf24;
+  color: #0f172a;
+}
 
 /* Animations */
 @keyframes spin {
@@ -339,5 +410,16 @@ h1 { margin: 0; font-size: 1.8rem; }
   .user-welcome { flex-direction: column; text-align: center; }
   .header-actions { justify-content: center; }
   .main-grid { grid-template-columns: 1fr; }
+}
+
+/* IMPRESIÓN DEL REPORTE */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .dashboard-panel {
+    background: transparent !important;
+    padding: 0 !important;
+  }
 }
 </style>

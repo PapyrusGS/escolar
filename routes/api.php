@@ -17,6 +17,18 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+Route::middleware('auth:sanctum')->group(function () {
+    // Notificaciones
+    Route::get('/notificaciones', [\App\Http\Controllers\API\NotificacionController::class, 'index']);
+    Route::patch('/notificaciones/{id}/toggle', [\App\Http\Controllers\API\NotificacionController::class, 'toggle']);
+    Route::delete('/notificaciones/{id}', [\App\Http\Controllers\API\NotificacionController::class, 'destroy']);
+    Route::post('/notificaciones', [\App\Http\Controllers\API\NotificacionController::class, 'store']);
+
+    // Reportes
+    Route::get('/reportes/materias-carrera', [\App\Http\Controllers\API\ReporteController::class, 'materiasPorCarrera']);
+    Route::get('/reportes/dinamico', [\App\Http\Controllers\API\ReporteController::class, 'reportePorRol']);
+});
+
 Route::prefix('usuarios')
     ->middleware(['auth:sanctum', 'admin.role'])
     ->group(function () {
