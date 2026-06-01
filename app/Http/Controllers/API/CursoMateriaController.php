@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Usuario\StoreUsuarioRequest;
-use App\Http\Requests\Usuario\UpdateUsuarioRequest;
-use App\Services\UsuarioService;
+use App\Http\Requests\Curso\StoreCursoMateriaRequest;
+use App\Http\Requests\Curso\UpdateCursoMateriaRequest;
+use App\Services\CursoMateriaService;
 use Illuminate\Http\JsonResponse;
 use Throwable;
 
-class UsuarioController extends Controller
+class CursoMateriaController extends Controller
 {
     public function __construct(
-        private readonly UsuarioService $usuarioService
+        private readonly CursoMateriaService $cursoMateriaService
     ) {
     }
 
@@ -21,7 +21,7 @@ class UsuarioController extends Controller
         try {
             return response()->json([
                 'status' => true,
-                'data' => $this->usuarioService->all(),
+                'data' => $this->cursoMateriaService->all(),
             ], 200);
         } catch (Throwable $e) {
             report($e);
@@ -37,7 +37,7 @@ class UsuarioController extends Controller
     public function formData(): JsonResponse
     {
         try {
-            return response()->json($this->usuarioService->formData(), 200);
+            return response()->json($this->cursoMateriaService->formData(), 200);
         } catch (Throwable $e) {
             report($e);
 
@@ -49,10 +49,12 @@ class UsuarioController extends Controller
         }
     }
 
-    public function store(StoreUsuarioRequest $request): JsonResponse
+    public function store(StoreCursoMateriaRequest $request): JsonResponse
     {
         try {
-            return response()->json($this->usuarioService->store($request->validated()), 201);
+            $result = $this->cursoMateriaService->store($request->validated());
+
+            return response()->json($result, 201);
         } catch (Throwable $e) {
             report($e);
 
@@ -64,10 +66,12 @@ class UsuarioController extends Controller
         }
     }
 
-    public function update(UpdateUsuarioRequest $request, int $id): JsonResponse
+    public function update(UpdateCursoMateriaRequest $request, int $id): JsonResponse
     {
         try {
-            return response()->json($this->usuarioService->update($id, $request->validated()), 200);
+            $result = $this->cursoMateriaService->update($id, $request->validated());
+
+            return response()->json($result, 200);
         } catch (Throwable $e) {
             report($e);
 
@@ -82,10 +86,12 @@ class UsuarioController extends Controller
     public function destroy(int $id): JsonResponse
     {
         try {
-            $this->usuarioService->destroy($id);
+            $result = $this->cursoMateriaService->destroy($id);
+
             return response()->json([
                 'status' => true,
-                'message' => 'Usuario eliminado correctamente.',
+                'action' => $result['status'],
+                'message' => $result['message'],
             ], 200);
         } catch (Throwable $e) {
             report($e);
@@ -100,10 +106,30 @@ class UsuarioController extends Controller
     public function toggleStatus(int $id): JsonResponse
     {
         try {
-            $this->usuarioService->toggleStatus($id);
+            $this->cursoMateriaService->toggleStatus($id);
+
             return response()->json([
                 'status' => true,
-                'message' => 'Estado del usuario actualizado.',
+                'message' => 'Estado del curso actualizado.',
+            ], 200);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getCursosByUsuario(int $idUsuario): JsonResponse
+    {
+        try {
+            $result = $this->cursoMateriaService->getCursosByUsuario($idUsuario);
+
+            return response()->json([
+                'status' => true,
+                'data' => $result,
             ], 200);
         } catch (Throwable $e) {
             report($e);

@@ -66,6 +66,95 @@ class UsuarioService
         }
     }
 
+    public function all(): array
+    {
+        return collect($this->usuarioRepository->all())->map(function ($user) {
+            return [
+                'IdUsuario' => $user->IdUsuario,
+                'IdRol' => $user->IdRol,
+                'Nombre1' => $user->Nombre1,
+                'Nombre2' => $user->Nombre2,
+                'Apellido1' => $user->Apellido1,
+                'Apellido2' => $user->Apellido2,
+                'CI' => $user->CI,
+                'Telefono' => $user->Telefono,
+                'Correo' => $user->Correo,
+                'FechaRegistro' => $user->FechaRegistro,
+                'Estado' => (bool)$user->Estado,
+                'Rol' => $user->rol,
+                'IdCarrera' => $user->IdCarrera,
+                'IdModalidad' => $user->IdModalidad,
+            ];
+        })->all();
+    }
+
+    public function update(int $id, array $payload): array
+    {
+        try {
+            return DB::transaction(function () use ($id, $payload) {
+                $usuario = $this->usuarioRepository->findById($id);
+                if (!$usuario) {
+                    throw new RuntimeException('Usuario no encontrado.');
+                }
+
+                $data = [
+                    'IdRol' => (int) $usuario->IdRol,
+                    'Nombre1' => $payload['Nombre1'],
+                    'Nombre2' => $payload['Nombre2'] ?? null,
+                    'Apellido1' => $payload['Apellido1'],
+                    'Apellido2' => $payload['Apellido2'] ?? null,
+                    'CI' => $payload['CI'],
+                    'Telefono' => $payload['Telefono'],
+                    'Correo' => $payload['Correo'],
+                    'Estado' => (bool) ($payload['Estado'] ?? true),
+                ];
+
+                if (!empty($payload['Contrasena'])) {
+                    $data['Contrasena'] = Hash::make($payload['Contrasena']);
+                }
+
+                $this->usuarioRepository->update($id, $data);
+
+                if ((int) $usuario->IdRol === 3) {
+                    $this->estudianteCarreraRepository->updateOrCreate(
+                        $id,
+                        (int) $payload['IdCarrera'],
+                        (int) $payload['IdModalidad']
+                    );
+                }
+
+                return [
+                    'user' => $this->usuarioRepository->findById($id),
+                ];
+            });
+        } catch (\Throwable $e) {
+            throw new RuntimeException('No se pudo actualizar el usuario: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function destroy(int $id): bool
+    {
+        try {
+            return DB::transaction(function () use ($id) {
+                $this->estudianteCarreraRepository->deleteByUsuarioId($id);
+                return $this->usuarioRepository->delete($id);
+            });
+        } catch (\Throwable $e) {
+            throw new RuntimeException('No se pudo eliminar el usuario debido a dependencias académicas o del sistema: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    public function toggleStatus(int $id): bool
+    {
+        $usuario = $this->usuarioRepository->findById($id);
+        if (!$usuario) {
+            throw new RuntimeException('Usuario no encontrado.');
+        }
+        return $this->usuarioRepository->update($id, [
+            'Estado' => !$usuario->Estado
+        ]);
+    }
+
     private function mapRows(iterable $rows, array $fields): array
     {
         return collect($rows)->map(function ($row) use ($fields) {

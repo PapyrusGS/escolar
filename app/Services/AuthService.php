@@ -87,9 +87,65 @@ class AuthService
         }
     }
 
+    public function updateProfile(User $usuario, array $payload): array
+    {
+        try {
+            $this->usuarioRepository->update($usuario->IdUsuario, [
+                'Nombre1' => $payload['Nombre1'],
+                'Nombre2' => $payload['Nombre2'] ?? null,
+                'Apellido1' => $payload['Apellido1'],
+                'Apellido2' => $payload['Apellido2'] ?? null,
+                'CI' => $payload['CI'],
+                'Telefono' => $payload['Telefono'],
+                'Correo' => $payload['Correo'],
+            ]);
+
+            $updatedUser = $this->usuarioRepository->findById($usuario->IdUsuario);
+
+            return [
+                'status' => true,
+                'message' => 'Perfil actualizado correctamente.',
+                'data' => [
+                    'user' => $this->formatUser($updatedUser),
+                ],
+            ];
+        } catch (Throwable $e) {
+            report($e);
+            throw new RuntimeException('No se pudo actualizar el perfil.');
+        }
+    }
+
+    public function changePassword(User $usuario, string $currentPassword, string $newPassword): array
+    {
+        try {
+            $dbUser = $this->usuarioRepository->findById($usuario->IdUsuario);
+
+            if (! Hash::check($currentPassword, $dbUser->Contrasena)) {
+                return [
+                    'status' => false,
+                    'message' => 'La contraseña actual es incorrecta.',
+                    'data' => [],
+                ];
+            }
+
+            $this->usuarioRepository->update($usuario->IdUsuario, [
+                'Contrasena' => Hash::make($newPassword),
+            ]);
+
+            return [
+                'status' => true,
+                'message' => 'Contraseña cambiada correctamente.',
+                'data' => [],
+            ];
+        } catch (Throwable $e) {
+            report($e);
+            throw new RuntimeException('No se pudo cambiar la contraseña.');
+        }
+    }
+
     private function formatUser(User $usuario): array
     {
-        return [
+        $data = [
             'IdUsuario' => $usuario->IdUsuario,
             'IdRol' => $usuario->IdRol,
             'Rol' => [
@@ -109,5 +165,28 @@ class AuthService
             'Semestre' => $usuario->Semestre,
             'Estado' => $usuario->Estado,
         ];
+
+        if ((int) $usuario->IdRol === 3) {
+            $estudianteCarrera = \Illuminate\Support\Facades\DB::table('EstudianteCarrera')
+                ->leftJoin('carreras', 'EstudianteCarrera.IdCarrera', '=', 'carreras.IdCarrera')
+                ->leftJoin('modalidad', 'EstudianteCarrera.IdModalidad', '=', 'modalidad.IdModalidad')
+                ->where('EstudianteCarrera.IdUsuario', $usuario->IdUsuario)
+                ->select(
+                    'EstudianteCarrera.IdCarrera',
+                    'EstudianteCarrera.IdModalidad',
+                    'carreras.Nombre as CarreraNombre',
+                    'modalidad.Nombre as ModalidadNombre'
+                )
+                ->first();
+
+            if ($estudianteCarrera) {
+                $data['IdCarrera'] = $estudianteCarrera->IdCarrera;
+                $data['IdModalidad'] = $estudianteCarrera->IdModalidad;
+                $data['CarreraNombre'] = $estudianteCarrera->CarreraNombre;
+                $data['ModalidadNombre'] = $estudianteCarrera->ModalidadNombre;
+            }
+        }
+
+        return $data;
     }
 }

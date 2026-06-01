@@ -4,6 +4,8 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -85,6 +87,64 @@ class AuthController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Ocurrió un error al obtener el perfil.',
+                'data' => [],
+            ], 500);
+        }
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        try {
+            $usuario = $request->user();
+
+            if (! $usuario) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Usuario no autenticado.',
+                    'data' => [],
+                ], 401);
+            }
+
+            $result = $this->authService->updateProfile($usuario, $request->validated());
+
+            return response()->json($result, 200);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Ocurrió un error al actualizar el perfil.',
+                'data' => [],
+            ], 500);
+        }
+    }
+
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        try {
+            $usuario = $request->user();
+
+            if (! $usuario) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Usuario no autenticado.',
+                    'data' => [],
+                ], 401);
+            }
+
+            $result = $this->authService->changePassword(
+                $usuario,
+                $request->validated('password_actual'),
+                $request->validated('contrasena')
+            );
+
+            return response()->json($result, $result['status'] ? 200 : 400);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Ocurrió un error al cambiar la contraseña.',
                 'data' => [],
             ], 500);
         }
