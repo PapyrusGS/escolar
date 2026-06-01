@@ -33,4 +33,31 @@ class UsuarioRepository
             ->where('IdUsuario', $id)
             ->first();
     }
+
+    public function all(): iterable
+    {
+        return User::query()
+            ->with('rol')
+            ->leftJoin('EstudianteCarrera', 'usuarios.IdUsuario', '=', 'EstudianteCarrera.IdUsuario')
+            ->select(
+                'usuarios.*',
+                'EstudianteCarrera.IdCarrera',
+                'EstudianteCarrera.IdModalidad'
+            )
+            ->get();
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        return DB::table('usuarios')
+            ->where('IdUsuario', $id)
+            ->update($data);
+    }
+
+    public function delete(int $id): bool
+    {
+        return DB::table('usuarios')
+            ->where('IdUsuario', $id)
+            ->delete();
+    }
 }

@@ -13,3 +13,7 @@ Route::get('/index', function () {
 Route::get('/usuarios/create', function () {
     return view('usuarios.create');
 });
+
+Route::get('/usuarios', function () {
+    return view('usuarios.index');
+});
