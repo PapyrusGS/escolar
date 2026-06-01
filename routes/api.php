@@ -36,4 +36,5 @@ Route::prefix('cursos-materias')
         Route::put('/{id}', [CursoMateriaController::class, 'update']);
         Route::delete('/{id}', [CursoMateriaController::class, 'destroy']);
         Route::patch('/{id}/toggle-status', [CursoMateriaController::class, 'toggleStatus']);
+        Route::get('/usuario/{idUsuario}', [CursoMateriaController::class, 'getCursosByUsuario']);
     });

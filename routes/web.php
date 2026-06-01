@@ -25,3 +25,7 @@ Route::get('/perfil', function () {
 Route::get('/cursos', function () {
     return view('cursos.index');
 });
+
+Route::get('/cursos/visualizacion', function () {
+    return view('cursos.visualizacion');
+});

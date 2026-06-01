@@ -121,4 +121,23 @@ class CursoMateriaController extends Controller
             ], 500);
         }
     }
+
+    public function getCursosByUsuario(int $idUsuario): JsonResponse
+    {
+        try {
+            $result = $this->cursoMateriaService->getCursosByUsuario($idUsuario);
+
+            return response()->json([
+                'status' => true,
+                'data' => $result,
+            ], 200);
+        } catch (Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

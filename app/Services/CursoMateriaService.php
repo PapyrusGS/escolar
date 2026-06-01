@@ -166,4 +166,197 @@ class CursoMateriaService
             'Estado' => !$cm->Estado,
         ]);
     }
+
+    public function getCursosByUsuario(int $idUsuario): array
+    {
+        $user = User::query()
+            ->with('rol')
+            ->leftJoin('EstudianteCarrera', 'usuarios.IdUsuario', '=', 'EstudianteCarrera.IdUsuario')
+            ->leftJoin('carreras', 'EstudianteCarrera.IdCarrera', '=', 'carreras.IdCarrera')
+            ->leftJoin('modalidad', 'EstudianteCarrera.IdModalidad', '=', 'modalidad.IdModalidad')
+            ->where('usuarios.IdUsuario', $idUsuario)
+            ->select(
+                'usuarios.*',
+                'carreras.Nombre as CarreraNombre',
+                'modalidad.Nombre as ModalidadNombre'
+            )
+            ->first();
+
+        if (!$user) {
+            throw new \RuntimeException('Usuario no encontrado.');
+        }
+
+        $userProfile = [
+            'IdUsuario' => $user->IdUsuario,
+            'Nombre' => trim($user->Nombre1 . ' ' . $user->Nombre2) . ' ' . trim($user->Apellido1 . ' ' . $user->Apellido2),
+            'Correo' => $user->Correo,
+            'CI' => $user->CI,
+            'Telefono' => $user->Telefono,
+            'Rol' => $user->rol?->Nombre,
+            'IdRol' => (int) $user->IdRol,
+            'Carrera' => $user->CarreraNombre,
+            'Modalidad' => $user->ModalidadNombre,
+        ];
+
+        $coursesFormatted = [];
+
+        if ($user->IdRol === 2) {
+            // Docente: Obtener cursos programados bajo su docencia
+            $courses = \Illuminate\Support\Facades\DB::table('cursos_materias')
+                ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
+                ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
+                ->join('turnos', 'cursos_materias.IdTurno', '=', 'turnos.IdTurno')
+                ->where('cursos_materias.IdDocente', $idUsuario)
+                ->select(
+                    'cursos_materias.IdCursoMateria',
+                    'cursos_materias.FechaInicio',
+                    'cursos_materias.FechaFin',
+                    'cursos_materias.MaxInscritos',
+                    'cursos_materias.Inscritos',
+                    'cursos_materias.Estado as CursoEstado',
+                    'cursos.Aula',
+                    'cursos.Piso',
+                    'cursos.Nombre as AulaNombre',
+                    'materias.Nombre as MateriaNombre',
+                    'materias.CodigoMateria',
+                    'turnos.Nombre as TurnoNombre',
+                    'turnos.HoraInicio',
+                    'turnos.HoraFin'
+                )
+                ->get();
+
+            $coursesFormatted = collect($courses)->map(function ($c) {
+                // Obtener alumnos inscritos en este curso específico
+                $enrolled = \Illuminate\Support\Facades\DB::table('inscripciones')
+                    ->join('EstudianteCarrera', 'inscripciones.IdEstudiante', '=', 'EstudianteCarrera.IdEstudianteCarrera')
+                    ->join('usuarios', 'EstudianteCarrera.IdUsuario', '=', 'usuarios.IdUsuario')
+                    ->join('carreras', 'EstudianteCarrera.IdCarrera', '=', 'carreras.IdCarrera')
+                    ->join('modalidad', 'EstudianteCarrera.IdModalidad', '=', 'modalidad.IdModalidad')
+                    ->where('inscripciones.IdCursoMateria', $c->IdCursoMateria)
+                    ->select(
+                        'usuarios.IdUsuario',
+                        'usuarios.Nombre1',
+                        'usuarios.Nombre2',
+                        'usuarios.Apellido1',
+                        'usuarios.Apellido2',
+                        'usuarios.CI',
+                        'usuarios.Correo',
+                        'carreras.Nombre as Carrera',
+                        'modalidad.Nombre as Modalidad',
+                        'inscripciones.Fecha as FechaInscripcion',
+                        'inscripciones.Estado as EstadoInscripcion',
+                        'inscripciones.Aprobado'
+                    )
+                    ->get();
+
+                $enrolledFormatted = collect($enrolled)->map(function ($stu) {
+                    return [
+                        'IdUsuario' => $stu->IdUsuario,
+                        'Nombre' => trim($stu->Nombre1 . ' ' . $stu->Nombre2) . ' ' . trim($stu->Apellido1 . ' ' . $stu->Apellido2),
+                        'CI' => $stu->CI,
+                        'Correo' => $stu->Correo,
+                        'Carrera' => $stu->Carrera,
+                        'Modalidad' => $stu->Modalidad,
+                        'FechaInscripcion' => $stu->FechaInscripcion,
+                        'Estado' => (bool)$stu->EstadoInscripcion,
+                        'Aprobado' => (bool)$stu->Aprobado,
+                    ];
+                })->all();
+
+                return [
+                    'IdCursoMateria' => $c->IdCursoMateria,
+                    'FechaInicio' => $c->FechaInicio,
+                    'FechaFin' => $c->FechaFin,
+                    'MaxInscritos' => (int)$c->MaxInscritos,
+                    'Inscritos' => (int)$c->Inscritos,
+                    'Estado' => (bool)$c->CursoEstado,
+                    'Materia' => [
+                        'Nombre' => $c->MateriaNombre,
+                        'CodigoMateria' => $c->CodigoMateria,
+                    ],
+                    'Curso' => [
+                        'Aula' => $c->Aula,
+                        'Piso' => $c->Piso,
+                        'Nombre' => $c->AulaNombre ?? ('Aula ' . $c->Aula),
+                    ],
+                    'Turno' => [
+                        'Nombre' => $c->TurnoNombre,
+                        'HoraInicio' => $c->HoraInicio,
+                        'HoraFin' => $c->HoraFin,
+                    ],
+                    'Alumnos' => $enrolledFormatted
+                ];
+            })->all();
+        } elseif ($user->IdRol === 3) {
+            // Estudiante: Obtener cursos en los que se encuentra inscrito
+            $courses = \Illuminate\Support\Facades\DB::table('inscripciones')
+                ->join('EstudianteCarrera', 'inscripciones.IdEstudiante', '=', 'EstudianteCarrera.IdEstudianteCarrera')
+                ->join('cursos_materias', 'inscripciones.IdCursoMateria', '=', 'cursos_materias.IdCursoMateria')
+                ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
+                ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
+                ->join('usuarios as docente', 'cursos_materias.IdDocente', '=', 'docente.IdUsuario')
+                ->join('turnos', 'cursos_materias.IdTurno', '=', 'turnos.IdTurno')
+                ->where('EstudianteCarrera.IdUsuario', $idUsuario)
+                ->select(
+                    'cursos_materias.IdCursoMateria',
+                    'cursos_materias.FechaInicio',
+                    'cursos_materias.FechaFin',
+                    'cursos_materias.Estado as CursoEstado',
+                    'cursos.Aula',
+                    'cursos.Piso',
+                    'cursos.Nombre as AulaNombre',
+                    'materias.Nombre as MateriaNombre',
+                    'materias.CodigoMateria',
+                    'docente.Nombre1 as DocenteNombre1',
+                    'docente.Nombre2 as DocenteNombre2',
+                    'docente.Apellido1 as DocenteApellido1',
+                    'docente.Apellido2 as DocenteApellido2',
+                    'docente.Correo as DocenteCorreo',
+                    'turnos.Nombre as TurnoNombre',
+                    'turnos.HoraInicio',
+                    'turnos.HoraFin',
+                    'inscripciones.Fecha as FechaInscripcion',
+                    'inscripciones.Estado as EstadoInscripcion',
+                    'inscripciones.Aprobado'
+                )
+                ->get();
+
+            $coursesFormatted = collect($courses)->map(function ($c) {
+                return [
+                    'IdCursoMateria' => $c->IdCursoMateria,
+                    'FechaInicio' => $c->FechaInicio,
+                    'FechaFin' => $c->FechaFin,
+                    'Estado' => (bool)$c->CursoEstado,
+                    'Materia' => [
+                        'Nombre' => $c->MateriaNombre,
+                        'CodigoMateria' => $c->CodigoMateria,
+                    ],
+                    'Curso' => [
+                        'Aula' => $c->Aula,
+                        'Piso' => $c->Piso,
+                        'Nombre' => $c->AulaNombre ?? ('Aula ' . $c->Aula),
+                    ],
+                    'Docente' => [
+                        'Nombre' => trim($c->DocenteNombre1 . ' ' . $c->DocenteNombre2) . ' ' . trim($c->DocenteApellido1 . ' ' . $c->DocenteApellido2),
+                        'Correo' => $c->DocenteCorreo,
+                    ],
+                    'Turno' => [
+                        'Nombre' => $c->TurnoNombre,
+                        'HoraInicio' => $c->HoraInicio,
+                        'HoraFin' => $c->HoraFin,
+                    ],
+                    'Inscripcion' => [
+                        'Fecha' => $c->FechaInscripcion,
+                        'Estado' => (bool)$c->EstadoInscripcion,
+                        'Aprobado' => (bool)$c->Aprobado,
+                    ]
+                ];
+            })->all();
+        }
+
+        return [
+            'usuario' => $userProfile,
+            'cursos' => $coursesFormatted,
+        ];
+    }
 }
