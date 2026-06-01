@@ -13,6 +13,7 @@ Route::prefix('auth')->group(function () {
         Route::get('/perfil', [AuthController::class, 'profile']);
         Route::put('/perfil', [AuthController::class, 'updateProfile']);
         Route::put('/contrasena', [AuthController::class, 'changePassword']);
+        Route::get('/dashboard/stats', [\App\Http\Controllers\API\DashboardController::class, 'getStats']);
     });
 });
 

@@ -29,3 +29,7 @@ Route::get('/cursos', function () {
 Route::get('/cursos/visualizacion', function () {
     return view('cursos.visualizacion');
 });
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+});
