@@ -27,6 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Reportes
     Route::get('/reportes/materias-carrera', [\App\Http\Controllers\API\ReporteController::class, 'materiasPorCarrera']);
     Route::get('/reportes/dinamico', [\App\Http\Controllers\API\ReporteController::class, 'reportePorRol']);
+    Route::get('/reportes/tipos', [\App\Http\Controllers\API\ReporteController::class, 'tiposReporte']);
+    Route::get('/reportes/filtros', [\App\Http\Controllers\API\ReporteController::class, 'filtros']);
+    Route::get('/reportes/filter-data/{tipo}', [\App\Http\Controllers\API\ReporteController::class, 'filterData']);
 });
 
 Route::prefix('usuarios')

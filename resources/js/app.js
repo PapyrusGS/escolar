@@ -8,6 +8,7 @@ import UserProfile from './components/UserProfile.vue';
 import CursosManagement from './components/CursosManagement.vue';
 import CursosVisualizacion from './components/CursosVisualizacion.vue';
 import Dashboard from './components/Dashboard.vue';
+import ReportesApp from './components/ReportesApp.vue';
 
 const mounts = [
     { id: 'login-app', component: LoginForm },
@@ -18,6 +19,7 @@ const mounts = [
     { id: 'cursos-management-app', component: CursosManagement },
     { id: 'cursos-visualizacion-app', component: CursosVisualizacion },
     { id: 'dashboard-app', component: Dashboard },
+    { id: 'reportes-app', component: ReportesApp },
 ];
 
 for (const mount of mounts) {

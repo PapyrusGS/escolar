@@ -134,29 +134,33 @@
               <div class="card__body shortcuts-body">
                 <!-- Accesos Admin -->
                 <template v-if="user?.IdRol === 1">
-                  <!-- Módulos Nuevos en Botón Premium Interactivos -->
                   <button @click="activeTab = 'notifications'" class="shortcut-btn shortcut-btn--highlight">
                     🔔 Bandeja de Notificaciones
                   </button>
                   <button @click="activeTab = 'reports'" class="shortcut-btn shortcut-btn--highlight">
                     📊 Reporte de Materias
                   </button>
-                  
-                  <!-- Accesos Clásicos -->
+                  <button @click="activeTab = 'reports-v2'" class="shortcut-btn shortcut-btn--premium">
+                    📋 Reportes del Sistema
+                  </button>
                   <a href="/usuarios/create" class="shortcut-btn">Registrar Usuario</a>
                   <a href="/usuarios" class="shortcut-btn">Gestionar Usuarios</a>
                   <a href="/cursos" class="shortcut-btn">Gestionar Cursos</a>
                   <a href="/cursos/visualizacion" class="shortcut-btn">Ver Cursos por Usuario</a>
                 </template>
 
-                <!-- Accesos Docente -->
                 <template v-if="user?.IdRol === 2">
+                  <button @click="activeTab = 'reports-v2'" class="shortcut-btn shortcut-btn--premium">
+                    📋 Reportes
+                  </button>
                   <a href="/cursos/visualizacion" class="shortcut-btn">Ver Alumnos Inscritos</a>
                   <a href="/perfil" class="shortcut-btn">Actualizar mis Datos</a>
                 </template>
 
-                <!-- Accesos Estudiante -->
                 <template v-if="user?.IdRol === 3">
+                  <button @click="activeTab = 'reports-v2'" class="shortcut-btn shortcut-btn--premium">
+                    📋 Mis Reportes
+                  </button>
                   <a href="/inscripciones" class="shortcut-btn">Inscribirme a Cursos</a>
                   <a href="/perfil" class="shortcut-btn">Cambiar Contraseña</a>
                 </template>
@@ -178,6 +182,11 @@
         <AdminReporte :user="user" />
       </div>
 
+      <!-- VISTA 4: Reportes del Sistema (Multirrol) -->
+      <div v-else-if="activeTab === 'reports-v2'">
+        <ReportesApp :user="user" />
+      </div>
+
     </div>
 
   </section>
@@ -187,17 +196,19 @@
 import axios from 'axios';
 import AdminNotificacion from './AdminNotificacion.vue';
 import AdminReporte from './AdminReporte.vue';
+import ReportesApp from './ReportesApp.vue';
 
 export default {
   name: 'Dashboard',
   components: {
     AdminNotificacion,
-    AdminReporte
+    AdminReporte,
+    ReportesApp
   },
   data() {
     return {
       user: null,
-      activeTab: 'summary', // summary, notifications, reports
+      activeTab: 'summary', // summary, notifications, reports, reports-v2
       dashboardData: {
         rol: '',
         resumen: [],
@@ -397,6 +408,16 @@ h1 { margin: 0; font-size: 1.8rem; }
 }
 .shortcut-btn--highlight:hover {
   background: #fbbf24;
+  color: #0f172a;
+}
+
+.shortcut-btn--premium {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: #c4b5fd;
+}
+.shortcut-btn--premium:hover {
+  background: #a78bfa;
   color: #0f172a;
 }
 

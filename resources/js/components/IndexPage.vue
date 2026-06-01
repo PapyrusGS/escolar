@@ -29,6 +29,7 @@
     <div class="role-actions">
       <a class="role-link" href="/perfil">Mi perfil</a>
       <a class="role-link" href="/dashboard">Dashboard</a>
+      <a class="role-link" href="/reportes">Reportes</a>
       <a class="role-link" href="/cursos/visualizacion">Ver cursos</a>
       
       <!-- Botón de Notificaciones con contador -->

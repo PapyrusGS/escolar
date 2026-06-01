@@ -9,7 +9,7 @@ class NotificacionSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Agregar dinámicamente un mensaje de bienvenida a TODOS los usuarios registrados en el sistema
+
         $usuarios = DB::table('usuarios')->get();
 
         foreach ($usuarios as $usuario) {
