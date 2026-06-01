@@ -5,6 +5,7 @@ import IndexPage from './components/IndexPage.vue';
 import UserCreateForm from './components/UserCreateForm.vue';
 import UserManagement from './components/UserManagement.vue';
 import UserProfile from './components/UserProfile.vue';
+import CursosManagement from './components/CursosManagement.vue';
 
 const mounts = [
     { id: 'login-app', component: LoginForm },
@@ -12,6 +13,7 @@ const mounts = [
     { id: 'user-create-app', component: UserCreateForm },
     { id: 'user-management-app', component: UserManagement },
     { id: 'user-profile-app', component: UserProfile },
+    { id: 'cursos-management-app', component: CursosManagement },
 ];
 
 for (const mount of mounts) {

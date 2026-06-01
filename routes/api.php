@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\UsuarioController;
+use App\Http\Controllers\API\CursoMateriaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -24,4 +25,15 @@ Route::prefix('usuarios')
         Route::put('/{id}', [UsuarioController::class, 'update']);
         Route::delete('/{id}', [UsuarioController::class, 'destroy']);
         Route::patch('/{id}/toggle-status', [UsuarioController::class, 'toggleStatus']);
+    });
+
+Route::prefix('cursos-materias')
+    ->middleware(['auth:sanctum', 'admin.role'])
+    ->group(function () {
+        Route::get('/', [CursoMateriaController::class, 'index']);
+        Route::get('/form-data', [CursoMateriaController::class, 'formData']);
+        Route::post('/', [CursoMateriaController::class, 'store']);
+        Route::put('/{id}', [CursoMateriaController::class, 'update']);
+        Route::delete('/{id}', [CursoMateriaController::class, 'destroy']);
+        Route::patch('/{id}/toggle-status', [CursoMateriaController::class, 'toggleStatus']);
     });
