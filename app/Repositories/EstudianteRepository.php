@@ -63,7 +63,8 @@ class EstudianteRepository
     }
 
     /**
-     * RF05 - Muestra las materias disponibles que corresponden al Pensum y la Modalidad del alumno
+     * RF05 - Muestra las materias disponibles que corresponden al Pensum, la Modalidad 
+     * del alumno y además valida que tenga los prerrequisitos aprobados.
      */
     public function getMateriasPorModalidad(int $idUsuario, int $idModalidad)
     {
@@ -75,9 +76,9 @@ class EstudianteRepository
         }
 
         // 2. Obtenemos las combinaciones de IdCursoMateria en las que el alumno ya está inscrito
-        // Usamos la columna real de tu base de datos: 'IdEstudiante'
         $inscritasIds = DB::table('inscripciones')
             ->where('IdEstudiante', $estudianteCarrera->IdEstudianteCarrera)
+            ->where('Estado', 1)
             ->pluck('IdCursoMateria');
 
         // 3. Traemos los IDs de las materias que pertenecen al Pensum asociado a esa Modalidad y Carrera
@@ -88,7 +89,7 @@ class EstudianteRepository
             ->where('carreramateriapensum.Estado', 1)
             ->pluck('carreramateriapensum.IdMateria');
 
-        // 4. Listamos los cursos_materias disponibles haciendo los cruces limpios
+        // 4. Listamos los cursos_materias disponibles haciendo los cruces limpios y aplicando el escudo de prerrequisitos
         return DB::table('cursos_materias')
             ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
@@ -96,6 +97,23 @@ class EstudianteRepository
             ->whereNotIn('cursos_materias.IdCursoMateria', $inscritasIds)
             ->whereIn('cursos_materias.IdMateria', $materiasPensumIds) // Que pertenezca a sus materias permitidas
             ->where('cursos_materias.Estado', 1)
+            
+            // FILTRO DE PRERREQUISITOS (IdMateriaPrevia):
+            ->where(function ($query) use ($estudianteCarrera) {
+                $query->whereNull('materias.IdMateriaPrevia') // Si no requiere materia previa, califica directo
+                      ->orWhereExists(function ($subQuery) use ($estudianteCarrera) {
+                          // Si requiere una materia previa, buscamos que esté aprobada con nota >= 51 en la tabla 'notas'
+                          $subQuery->select(DB::raw(1))
+                              ->from('notas')
+                              ->join('inscripciones', 'notas.IdInscripcion', '=', 'inscripciones.IdInscripcion')
+                              ->join('cursos_materias as cm_previa', 'inscripciones.IdCursoMateria', '=', 'cm_previa.IdCursoMateria')
+                              ->where('inscripciones.IdEstudiante', $estudianteCarrera->IdEstudianteCarrera)
+                              ->whereColumn('cm_previa.IdMateria', 'materias.IdMateriaPrevia') // Compara con el ID de la materia previa requerida
+                              ->where('notas.Nota', '>=', 51.00) // Nota aprobatoria
+                              ->where('notas.Estado', 1)
+                              ->where('inscripciones.Estado', 1);
+                      });
+            })
             ->select(
                 'cursos_materias.IdCursoMateria',
                 'cursos.Nombre as Curso',
