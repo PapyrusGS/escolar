@@ -30,7 +30,7 @@
       <a class="role-link" href="/perfil">Mi perfil</a>
       <a class="role-link" href="/dashboard">Dashboard</a>
       <a class="role-link" href="/reportes">Reportes</a>
-      <a class="role-link" href="/cursos/visualizacion">Ver cursos</a>
+      <a v-if="user?.IdRol !== 2" class="role-link" href="/cursos/visualizacion">Ver cursos</a>
       
       <!-- Botón de Notificaciones con contador -->
       <button 
@@ -49,7 +49,8 @@
     </div>
 
     <div class="role-actions" v-if="user?.IdRol === 2">
-      <a class="role-link" href="/docente/inscripciones">Ver inscritos</a>
+      <a class="role-link" href="/docente/cursos">Mis cursos</a>
+      <a class="role-link" href="/docente/notas">Gestionar notas</a>
     </div>
 
     <!-- PANEL DE NOTIFICACIONES (Sección Acordeón Desplegable) -->

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Curso;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StoreCursoMateriaRequest extends FormRequest
@@ -17,11 +19,24 @@ class StoreCursoMateriaRequest extends FormRequest
         return [
             'IdCurso' => ['required', 'integer', Rule::exists('cursos', 'IdCurso')],
             'IdMateria' => ['required', 'integer', Rule::exists('materias', 'IdMateria')],
-            'IdDocente' => ['required', 'integer', Rule::exists('usuarios', 'IdUsuario')->where('IdRol', 2)],
             'IdTurno' => ['required', 'integer', Rule::exists('turnos', 'IdTurno')],
             'FechaInicio' => ['required', 'date'],
             'FechaFin' => ['required', 'date', 'after_or_equal:FechaInicio'],
             'MaxInscritos' => ['required', 'integer', 'min:1'],
+            'IdDocente' => ['required', 'integer', Rule::exists('usuarios', 'IdUsuario')->where('IdRol', 2), function ($attribute, $value, Closure $fail) {
+                $idTurno = $this->input('IdTurno');
+                if (!$idTurno) return;
+
+                $choque = DB::table('cursos_materias')
+                    ->where('IdDocente', $value)
+                    ->where('IdTurno', $idTurno)
+                    ->where('Estado', true)
+                    ->exists();
+
+                if ($choque) {
+                    $fail('El docente ya tiene un curso programado en este turno. Existe un conflicto de horarios.');
+                }
+            }],
         ];
     }
 

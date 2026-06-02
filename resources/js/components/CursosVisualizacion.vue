@@ -420,6 +420,17 @@ export default {
         window.location.href = '/';
         return;
       }
+
+      // Defensa en profundidad: si el usuario es docente, redirigir a su panel
+      const stored = localStorage.getItem('auth_user');
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user.IdRol === 2) {
+          window.location.href = '/docente/cursos';
+          return;
+        }
+      }
+
       await this.loadUsers();
     },
     async loadUsers() {

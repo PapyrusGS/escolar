@@ -27,8 +27,12 @@ Route::get('/cursos', function () {
 });
 
 Route::get('/cursos/visualizacion', function () {
+    $user = auth()->user();
+    if ($user && (int) $user->IdRol === 2) {
+        return redirect('/docente/cursos');
+    }
     return view('cursos.visualizacion');
-});
+})->middleware('auth');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -36,4 +40,12 @@ Route::get('/dashboard', function () {
 
 Route::get('/reportes', function () {
     return view('reportes');
+});
+
+Route::get('/docente/cursos', function () {
+    return view('docente.cursos');
+});
+
+Route::get('/docente/notas', function () {
+    return view('docente.notas');
 });

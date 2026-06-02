@@ -3,6 +3,8 @@
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\UsuarioController;
 use App\Http\Controllers\API\CursoMateriaController;
+use App\Http\Controllers\API\DocenteCursoController;
+use App\Http\Controllers\API\NotaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -53,4 +55,19 @@ Route::prefix('cursos-materias')
         Route::delete('/{id}', [CursoMateriaController::class, 'destroy']);
         Route::patch('/{id}/toggle-status', [CursoMateriaController::class, 'toggleStatus']);
         Route::get('/usuario/{idUsuario}', [CursoMateriaController::class, 'getCursosByUsuario']);
+    });
+
+Route::prefix('docente')
+    ->middleware(['auth:sanctum', 'teacher.role'])
+    ->group(function () {
+        // Cursos asignados al docente
+        Route::get('/cursos', [\App\Http\Controllers\API\DocenteCursoController::class, 'index']);
+        Route::get('/cursos/{idCursoMateria}/alumnos', [\App\Http\Controllers\API\DocenteCursoController::class, 'alumnos']);
+
+        // Gestión de notas
+        Route::get('/notas/cursos', [\App\Http\Controllers\API\NotaController::class, 'cursos']);
+        Route::get('/cursos/{idCursoMateria}/notas', [\App\Http\Controllers\API\NotaController::class, 'index']);
+        Route::post('/notas', [\App\Http\Controllers\API\NotaController::class, 'store']);
+        Route::put('/notas/{idNota}', [\App\Http\Controllers\API\NotaController::class, 'update']);
+        Route::get('/cursos/{idCursoMateria}/rendimiento', [\App\Http\Controllers\API\NotaController::class, 'rendimiento']);
     });

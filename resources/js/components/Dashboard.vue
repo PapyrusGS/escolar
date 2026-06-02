@@ -153,7 +153,8 @@
                   <button @click="activeTab = 'reports-v2'" class="shortcut-btn shortcut-btn--premium">
                     📋 Reportes
                   </button>
-                  <a href="/cursos/visualizacion" class="shortcut-btn">Ver Alumnos Inscritos</a>
+                  <a href="/docente/cursos" class="shortcut-btn">Mis Cursos y Alumnos</a>
+                  <a href="/docente/notas" class="shortcut-btn">Gestionar Notas</a>
                   <a href="/perfil" class="shortcut-btn">Actualizar mis Datos</a>
                 </template>
 

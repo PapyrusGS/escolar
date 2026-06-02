@@ -82,7 +82,9 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
                 'cursos.Nombre as Curso',
                 'materias.Nombre as Materia',
-                'notas.Nota'
+                'notas.Nota',
+                DB::raw("CASE WHEN notas.Nota IS NOT NULL THEN 'Registrada' ELSE 'Sin nota' END as NotaEstado"),
+                'inscripciones.Aprobado'
             )
             ->where('cursos_materias.IdDocente', $idDocente)
             ->where('EstudianteCarrera.IdUsuario', $params['IdEstudiante'])
@@ -108,7 +110,9 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
                 'cursos.Nombre as Curso',
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
                 'materias.Nombre as Materia',
-                'notas.Nota'
+                'notas.Nota',
+                DB::raw("CASE WHEN notas.Nota IS NOT NULL THEN 'Registrada' ELSE 'Sin nota' END as NotaEstado"),
+                'inscripciones.Aprobado'
             )
             ->where('cursos.IdCurso', $params['IdCurso'])
             ->where('cursos_materias.IdDocente', $idDocente)
@@ -128,12 +132,16 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->join('usuarios as estudiantes', 'EstudianteCarrera.IdUsuario', '=', 'estudiantes.IdUsuario')
             ->join('cursos_materias', 'inscripciones.IdCursoMateria', '=', 'cursos_materias.IdCursoMateria')
             ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
+            ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
                 'cursos.Nombre as Curso',
                 'estudiantes.CI',
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
                 'estudiantes.Correo',
-                'inscripciones.Fecha'
+                'inscripciones.Fecha',
+                'notas.Nota',
+                DB::raw("CASE WHEN notas.Nota IS NOT NULL THEN 'Registrada' ELSE 'Sin nota' END as NotaEstado"),
+                'inscripciones.Aprobado'
             )
             ->where('cursos.IdCurso', $params['IdCurso'])
             ->where('cursos_materias.IdDocente', $idDocente)
