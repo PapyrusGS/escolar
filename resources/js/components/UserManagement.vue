@@ -320,12 +320,12 @@ const handleLogout = async () => {
 };
 
 const columns = [
-  { key: 'user', label: 'Usuario', width: '24%' },
-  { key: 'contact', label: 'Contacto', width: '22%' },
-  { key: 'role', label: 'Rol', width: '14%' },
-  { key: 'academic', label: 'Académico', width: '20%' },
+  { key: 'user', label: 'Usuario', width: '22%' },
+  { key: 'contact', label: 'Contacto', width: '20%' },
+  { key: 'role', label: 'Rol', width: '12%' },
+  { key: 'academic', label: 'Académico', width: '18%' },
   { key: 'status', label: 'Estado', align: 'center', width: '10%' },
-  { key: 'actions', label: 'Acciones', align: 'right', width: '10%' },
+  { key: 'actions', label: 'Acciones', align: 'right', width: '18%' },
 ];
 </script>
 
@@ -465,8 +465,12 @@ const columns = [
 
             <template #cell-actions="{ row }">
               <div class="um__actions">
-                <AppButton variant="ghost" size="sm" :icon="Pencil" aria-label="Editar usuario" @click="openEditModal(row)" />
-                <AppButton variant="ghost" size="sm" :icon="Trash2" aria-label="Eliminar usuario" @click="confirmDelete(row)" />
+                <AppButton variant="outline" size="sm" :icon="Pencil" @click="openEditModal(row)">
+                  Editar
+                </AppButton>
+                <AppButton variant="danger" size="sm" :icon="Trash2" @click="confirmDelete(row)">
+                  Eliminar
+                </AppButton>
               </div>
             </template>
 
@@ -738,9 +742,33 @@ const columns = [
 .um__status-dot--off { background: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
 
 .um__actions {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 4px;
-  justify-content: flex-end;
+  min-width: 0;
+}
+
+.um__actions :deep(.app-btn) {
+  width: 100%;
+  justify-content: center;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  min-height: 32px;
+  gap: 4px;
+}
+
+.um__actions :deep(.app-btn--danger) {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+  box-shadow: none;
+}
+
+.um__actions :deep(.app-btn--danger:hover:not(:disabled)) {
+  background: var(--color-danger);
+  color: white;
+  transform: translateY(-1px);
 }
 
 .um__pagination {

@@ -135,8 +135,8 @@ const columns = [
   { key: 'turno', label: 'Turno', width: '14%' },
   { key: 'vigencia', label: 'Vigencia', width: '14%' },
   { key: 'cupos', label: 'Cupos', align: 'center', width: '10%' },
-  { key: 'status', label: 'Estado', align: 'center', width: '8%' },
-  { key: 'actions', label: 'Acciones', align: 'right', width: '6%' },
+  { key: 'status', label: 'Estado', align: 'center', width: '7%' },
+  { key: 'actions', label: 'Acciones', align: 'right', width: '10%' },
 ];
 
 onMounted(async () => {
@@ -472,7 +472,7 @@ const handleLogout = async () => {
             <template #cell-actions="{ row }">
               <div class="cm__actions">
                 <AppButton variant="ghost" size="sm" :icon="Pencil" aria-label="Editar" @click="openEdit(row)" />
-                <AppButton variant="ghost" size="sm" :icon="Trash2" aria-label="Eliminar" @click="confirmDelete(row)" />
+                <AppButton variant="danger" size="sm" :icon="Trash2" aria-label="Eliminar" @click="confirmDelete(row)" />
               </div>
             </template>
 
@@ -745,9 +745,32 @@ const handleLogout = async () => {
 .cm__status-dot--off { background: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
 
 .cm__actions {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 4px;
-  justify-content: flex-end;
+  justify-content: center;
+  min-width: 0;
+}
+
+.cm__actions :deep(.app-btn) {
+  width: 100%;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.cm__actions :deep(.app-btn--danger) {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+  box-shadow: none;
+}
+
+.cm__actions :deep(.app-btn--danger:hover:not(:disabled)) {
+  background: var(--color-danger);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .cm__pagination {
