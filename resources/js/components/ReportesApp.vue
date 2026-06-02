@@ -11,6 +11,9 @@ import AppSelect from './ui/AppSelect.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -206,7 +209,7 @@ const exportExcel = () => {
           description="Genera y exporta reportes dinámicos según tu rol en el sistema."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al Dashboard
             </AppButton>
           </template>

@@ -36,8 +36,10 @@ import AppEmptyState from './ui/AppEmptyState.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import { toast } from '../lib/toast.js';
 import { useGsap } from '../composables/useGsap.js';
+import { useGoTo } from '../composables/useGoTo.js';
 
 const { staggerIn } = useGsap();
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const users = ref([]);
@@ -103,7 +105,7 @@ onMounted(async () => {
   if (stored) {
     user.value = JSON.parse(stored);
     if (user.value.IdRol === 2) {
-      window.location.href = '/docente/cursos';
+      goTo('/docente/cursos');
       return;
     }
   }
@@ -176,7 +178,7 @@ const handleLogout = async () => {
           description="Consulta el historial y programación de clases de estudiantes y docentes en el ciclo lectivo."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al panel
             </AppButton>
           </template>

@@ -34,6 +34,9 @@ import AppRoleBadge from './ui/AppRoleBadge.vue';
 import AppBadge from './ui/AppBadge.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 import { useGsap } from '../composables/useGsap.js';
 
 const { staggerIn } = useGsap();
@@ -333,7 +336,7 @@ const columns = [
         >
           <template #actions>
             <AppButton variant="secondary" :icon="RefreshCw" @click="refresh">Actualizar</AppButton>
-            <AppButton variant="primary" :icon="UserPlus" @click="window.location.href = '/usuarios/create'">
+            <AppButton variant="primary" :icon="UserPlus" @click="goTo('/usuarios/create')">
               Registrar nuevo
             </AppButton>
           </template>
@@ -465,9 +468,9 @@ const columns = [
                 title="Sin usuarios registrados"
                 description="Crea el primer usuario del sistema para empezar a gestionar la comunidad académica."
               >
-                <AppButton variant="primary" :icon="UserPlus" @click="window.location.href = '/usuarios/create'">
-                  Registrar usuario
-                </AppButton>
+            <AppButton variant="primary" :icon="UserPlus" @click="goTo('/usuarios/create')">
+              Registrar usuario
+            </AppButton>
               </AppEmptyState>
             </template>
           </AppTable>
@@ -488,7 +491,7 @@ const columns = [
           </footer>
         </AppCard>
 
-        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+        <AppButton variant="ghost" :icon="ArrowLeft" @click="goTo('/dashboard')">
           Volver al panel principal
         </AppButton>
       </div>

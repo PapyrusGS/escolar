@@ -27,6 +27,9 @@ import AppRoleBadge from './ui/AppRoleBadge.vue';
 import AppAvatar from './ui/AppAvatar.vue';
 import AppBadge from './ui/AppBadge.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const activeTab = ref('datos');
@@ -177,7 +180,7 @@ const handleLogout = async () => {
           description="Visualiza tu información académica, personal y administra la seguridad de tu cuenta."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al Dashboard
             </AppButton>
           </template>

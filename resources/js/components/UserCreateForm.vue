@@ -11,6 +11,9 @@ import AppSelect from './ui/AppSelect.vue';
 import AppAlert from './ui/AppAlert.vue';
 import AppPageHeader from './ui/AppPageHeader.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const roles = ref([]);
@@ -115,7 +118,7 @@ const handleLogout = async () => {
           description="Alta de nuevos usuarios con selección de rol y validación de datos."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al panel
             </AppButton>
           </template>

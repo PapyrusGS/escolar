@@ -201,8 +201,8 @@ const handleLogout = async () => {
           description="Asigna, edita y visualiza el rendimiento de tus alumnos por curso."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/docente/cursos'">Mis cursos</AppButton>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">Volver al Dashboard</AppButton>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/docente/cursos')">Mis cursos</AppButton>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">Volver al Dashboard</AppButton>
           </template>
         </AppPageHeader>
 

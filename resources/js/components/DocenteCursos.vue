@@ -30,8 +30,10 @@ import AppEmptyState from './ui/AppEmptyState.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import { toast } from '../lib/toast.js';
 import { useGsap } from '../composables/useGsap.js';
+import { useGoTo } from '../composables/useGoTo.js';
 
 const { staggerIn } = useGsap();
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const cursos = ref([]);
@@ -137,8 +139,8 @@ const handleLogout = async () => {
           description="Consulta las materias que impartes, sus horarios y alumnos inscritos."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">Volver al Dashboard</AppButton>
-            <AppButton variant="primary" :icon="ClipboardList" @click="window.location.href = '/docente/notas'">Gestionar notas</AppButton>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">Volver al Dashboard</AppButton>
+            <AppButton variant="primary" :icon="ClipboardList" @click="goTo('/docente/notas')">Gestionar notas</AppButton>
           </template>
         </AppPageHeader>
 
@@ -220,7 +222,7 @@ const handleLogout = async () => {
               <AppButton variant="primary" :icon="Users" block @click="openAlumnos(c)">
                 Ver alumnos ({{ c.Inscritos }})
               </AppButton>
-              <AppButton variant="secondary" :icon="ClipboardList" block @click="window.location.href = `/docente/notas?curso=${c.IdCursoMateria}`">
+              <AppButton variant="secondary" :icon="ClipboardList" block @click="goTo(`/docente/notas?curso=${c.IdCursoMateria}`)">
                 Gestionar notas
               </AppButton>
             </footer>

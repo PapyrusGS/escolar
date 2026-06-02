@@ -34,6 +34,9 @@ import AppTable from './ui/AppTable.vue';
 import AppBadge from './ui/AppBadge.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 import { useGsap } from '../composables/useGsap.js';
 
 const { staggerIn } = useGsap();
@@ -496,7 +499,7 @@ const handleLogout = async () => {
           </footer>
         </AppCard>
 
-        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+        <AppButton variant="ghost" :icon="ArrowLeft" @click="goTo('/dashboard')">
           Volver al panel principal
         </AppButton>
       </div>

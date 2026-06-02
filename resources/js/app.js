@@ -15,6 +15,7 @@ import DocenteCursos from './components/DocenteCursos.vue';
 import DocenteNotas from './components/DocenteNotas.vue';
 import MisNotas from './components/MisNotas.vue';
 import InscripcionMaterias from './components/InscripcionMaterias.vue';
+import MisCursos from './components/MisCursos.vue';
 import AppToastStack from './components/ui/AppToastStack.vue';
 
 const mounts = [
@@ -33,6 +34,7 @@ const mounts = [
     { id: 'docente-notas-app', component: DocenteNotas },
     { id: 'mis-notas-app', component: MisNotas },
     { id: 'inscripcion-materias-app', component: InscripcionMaterias },
+    { id: 'mis-cursos-app', component: MisCursos },
     { id: 'notificaciones-app', component: AdminNotificacion },
 ];
 

@@ -26,6 +26,9 @@ import AppBadge from './ui/AppBadge.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import AppAlert from './ui/AppAlert.vue';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const notas = ref([]);
@@ -94,7 +97,7 @@ const handleLogout = async () => {
           description="Consulta tus notas registradas en cada materia inscrita del ciclo lectivo."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al Dashboard
             </AppButton>
           </template>

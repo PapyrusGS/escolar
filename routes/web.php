@@ -34,6 +34,10 @@ Route::get('/cursos/visualizacion', function () {
     return view('cursos.visualizacion');
 });
 
+Route::get('/cursos/mis-cursos', function () {
+    return view('cursos.mis-cursos');
+});
+
 Route::get('/cursos/inscripcion', function () {
     return view('cursos.inscripcion');
 });

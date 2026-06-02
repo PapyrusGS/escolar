@@ -31,6 +31,9 @@ import AppEmptyState from './ui/AppEmptyState.vue';
 import AppModal from './ui/AppModal.vue';
 import AppAlert from './ui/AppAlert.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const user = ref(null);
 const materias = ref([]);
@@ -49,7 +52,8 @@ const filteredMaterias = computed(() => {
     (m.Materia || '').toLowerCase().includes(q) ||
     (m.CodigoMateria || '').toLowerCase().includes(q) ||
     (m.Curso || '').toLowerCase().includes(q) ||
-    (m.Aula || '').toLowerCase().includes(q)
+    (m.Aula || '').toLowerCase().includes(q) ||
+    (m.Turno || '').toLowerCase().includes(q)
   );
 });
 
@@ -62,10 +66,10 @@ onMounted(async () => {
   axios.defaults.headers.common.Authorization = `Bearer ${token}`;
   const stored = localStorage.getItem('auth_user');
   if (stored) user.value = JSON.parse(stored);
-  if (user.value && Number(user.value.IdRol) !== 3) {
-    window.location.href = '/dashboard';
-    return;
-  }
+    if (user.value && Number(user.value.IdRol) !== 3) {
+      goTo('/dashboard');
+      return;
+    }
   await loadMaterias();
 });
 
@@ -155,7 +159,7 @@ const handleLogout = async () => {
           description="Selecciona las materias disponibles según tu modalidad y plan de estudios."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al Dashboard
             </AppButton>
             <AppButton variant="ghost" :icon="RefreshCw" @click="loadMaterias">Actualizar</AppButton>
@@ -201,7 +205,7 @@ const handleLogout = async () => {
               <AppBadge variant="primary" size="sm">Disponible</AppBadge>
             </header>
             <div class="im__card-body">
-              <div class="im__info"><MapPin :size="14" /><span><strong>Aula:</strong> {{ m.Curso || '—' }}</span></div>
+              <div class="im__info"><MapPin :size="14" /><span><strong>Aula:</strong> {{ m.Curso || m.Aula || '—' }}<template v-if="m.Piso"> (Piso {{ m.Piso }})</template></span></div>
               <div class="im__info"><Clock :size="14" /><span><strong>Turno:</strong> {{ m.Turno || '—' }}</span></div>
               <div class="im__info"><Calendar :size="14" /><span><strong>Vigencia:</strong> {{ formatDate(m.FechaInicio) }} al {{ formatDate(m.FechaFin) }}</span></div>
             </div>
@@ -230,7 +234,7 @@ const handleLogout = async () => {
             <div class="im__confirm-icon"><BookOpen :size="22" /></div>
             <div>
               <h4>{{ selectedMateria.Materia }}</h4>
-              <p><strong>Aula:</strong> {{ selectedMateria.Curso || '—' }}</p>
+              <p><strong>Aula:</strong> {{ selectedMateria.Curso || selectedMateria.Aula || '—' }}<template v-if="selectedMateria.Piso"> (Piso {{ selectedMateria.Piso }})</template></p>
               <p><strong>Turno:</strong> {{ selectedMateria.Turno || '—' }}</p>
               <p><strong>Vigencia:</strong> {{ formatDate(selectedMateria.FechaInicio) }} – {{ formatDate(selectedMateria.FechaFin) }}</p>
             </div>

@@ -10,20 +10,21 @@ class InscripcionSeeder extends Seeder
     public function run(): void
     {
         DB::table('inscripciones')->insert([
-            ['IdEstudiante' => 1, 'IdCursoMateria' => 1, 'Fecha' => now(), 'Estado' => true],
-            ['IdEstudiante' => 1, 'IdCursoMateria' => 2, 'Fecha' => now(), 'Estado' => true],
-            
-            ['IdEstudiante' => 2, 'IdCursoMateria' => 3, 'Fecha' => now(), 'Estado' => true],
-            ['IdEstudiante' => 2, 'IdCursoMateria' => 4, 'Fecha' => now(), 'Estado' => true],
-            
-            ['IdEstudiante' => 3, 'IdCursoMateria' => 1, 'Fecha' => now(), 'Estado' => true],
-            ['IdEstudiante' => 3, 'IdCursoMateria' => 2, 'Fecha' => now(), 'Estado' => true],
-            
-            ['IdEstudiante' => 4, 'IdCursoMateria' => 3, 'Fecha' => now(), 'Estado' => true],
-            ['IdEstudiante' => 4, 'IdCursoMateria' => 5, 'Fecha' => now(), 'Estado' => true],
-            
-            ['IdEstudiante' => 5, 'IdCursoMateria' => 5, 'Fecha' => now(), 'Estado' => true],
-            ['IdEstudiante' => 5, 'IdCursoMateria' => 6, 'Fecha' => now(), 'Estado' => true],
+            ['IdEstudiante' => 1, 'IdCursoMateria' => 1, 'Fecha' => now(), 'Estado' => true, 'Aprobado' => 0],
+            ['IdEstudiante' => 1, 'IdCursoMateria' => 2, 'Fecha' => now(), 'Estado' => true, 'Aprobado' => 0],
+
+            ['IdEstudiante' => 2, 'IdCursoMateria' => 9, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 0],
+            ['IdEstudiante' => 2, 'IdCursoMateria' => 10, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 0],
+
+            ['IdEstudiante' => 3, 'IdCursoMateria' => 1, 'Fecha' => now(), 'Estado' => true, 'Aprobado' => 0],
+            ['IdEstudiante' => 3, 'IdCursoMateria' => 2, 'Fecha' => now(), 'Estado' => true, 'Aprobado' => 0],
+
+            ['IdEstudiante' => 4, 'IdCursoMateria' => 9, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 1],
+            ['IdEstudiante' => 4, 'IdCursoMateria' => 11, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 1],
+
+            ['IdEstudiante' => 5, 'IdCursoMateria' => 9, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 1],
+            ['IdEstudiante' => 5, 'IdCursoMateria' => 10, 'Fecha' => now()->subDays(30), 'Estado' => true, 'Aprobado' => 0],
         ]);
     }
 }
+

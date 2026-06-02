@@ -22,6 +22,9 @@ import AppSelect from './ui/AppSelect.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
+import { useGoTo } from '../composables/useGoTo.js';
+
+const { goTo } = useGoTo();
 
 const props = defineProps({
   userRole: { type: Number, default: null },
@@ -151,7 +154,7 @@ const effectiveRole = computed(() => props.userRole ?? Number(currentUser.value?
           description="Gestiona tus avisos académicos y mensajes del sistema."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
               Volver al Dashboard
             </AppButton>
           </template>

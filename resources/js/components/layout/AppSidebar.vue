@@ -63,7 +63,7 @@ const navItems = computed(() => {
 
   if (rol === 3) {
     items.push(
-      { to: '/cursos/visualizacion', label: 'Mis cursos', icon: BookOpen, visible: true },
+      { to: '/cursos/mis-cursos', label: 'Mis cursos', icon: BookOpen, visible: true },
       { to: '/cursos/inscripcion', label: 'Inscripción a materias', icon: UserCheck, visible: true },
       { to: '/mis-notas', label: 'Mis calificaciones', icon: Award, visible: true },
       { to: '/reportes', label: 'Reportes', icon: BarChart3, visible: true },

@@ -118,7 +118,9 @@ class EstudianteRepository
                 'cursos_materias.IdCursoMateria',
                 'cursos.Nombre as Curso',
                 'cursos.Aula',
+                'cursos.Piso',
                 'materias.Nombre as Materia',
+                'materias.CodigoMateria',
                 'turnos.Nombre as Turno',
                 'cursos_materias.FechaInicio',
                 'cursos_materias.FechaFin'

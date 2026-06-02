@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             InscripcionSeeder::class,
             NotaSeeder::class,
             NotificacionSeeder::class,
+            FixAprobadoSeeder::class,
         ]);
     }
 }

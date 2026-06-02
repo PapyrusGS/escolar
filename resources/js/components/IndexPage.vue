@@ -61,7 +61,7 @@ const quickActions = computed(() => {
     items.push({ to: '/docente/cursos', label: 'Mis cursos', icon: BookOpen, variant: 'primary' });
     items.push({ to: '/docente/notas', label: 'Gestionar notas', icon: ClipboardList, variant: 'primary' });
   } else if (rol === 3) {
-    items.push({ to: '/cursos/visualizacion', label: 'Mis cursos', icon: BookOpen, variant: 'primary' });
+    items.push({ to: '/cursos/mis-cursos', label: 'Mis cursos', icon: BookOpen, variant: 'primary' });
     items.push({ to: '/perfil', label: 'Mi perfil', icon: Award, variant: 'primary' });
   }
 
