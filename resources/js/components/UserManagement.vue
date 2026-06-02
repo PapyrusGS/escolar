@@ -12,6 +12,7 @@ import {
   Mail,
   Phone,
   IdCard,
+  AtSign,
   User as UserIcon,
   Power,
   ChevronLeft,
@@ -64,6 +65,7 @@ function emptyForm() {
     IdCarrera: '',
     IdModalidad: '',
     Correo: '',
+    CorreoPersonal: '',
     CI: '',
     Telefono: '',
     Nombre1: '',
@@ -96,6 +98,7 @@ const filteredUsers = computed(() => {
     return (
       fullName.includes(query) ||
       (u.Correo || '').toLowerCase().includes(query) ||
+      (u.CorreoPersonal || '').toLowerCase().includes(query) ||
       (u.CI || '').toLowerCase().includes(query) ||
       (u.Telefono || '').toLowerCase().includes(query)
     );
@@ -214,6 +217,7 @@ const openEditModal = (u) => {
     IdCarrera: u.IdCarrera || '',
     IdModalidad: u.IdModalidad || '',
     Correo: u.Correo || '',
+    CorreoPersonal: u.CorreoPersonal || '',
     CI: u.CI || '',
     Telefono: u.Telefono || '',
     Nombre1: u.Nombre1 || '',
@@ -414,6 +418,10 @@ const columns = [
                   <Mail :size="13" />
                   <span>{{ row.Correo }}</span>
                 </span>
+                <span v-if="row.CorreoPersonal" class="um__contact-row um__contact-row--muted">
+                  <AtSign :size="13" />
+                  <span>{{ row.CorreoPersonal }}</span>
+                </span>
                 <span class="um__contact-row um__contact-row--muted">
                   <IdCard :size="13" />
                   <span>CI: {{ row.CI }}</span>
@@ -526,7 +534,8 @@ const columns = [
             placeholder="Seleccione una modalidad"
           />
 
-          <AppInput v-model="editForm.Correo" label="Correo" type="email" required autocomplete="email" />
+          <AppInput v-model="editForm.Correo" label="Correo académico" type="email" required autocomplete="email" hint="Correo institucional usado para iniciar sesión." />
+          <AppInput v-model="editForm.CorreoPersonal" label="Correo personal" type="email" :icon="AtSign" placeholder="Opcional — correo de respaldo" />
           <AppInput v-model="editForm.CI" label="CI" required />
           <AppInput v-model="editForm.Telefono" label="Teléfono" required />
           <AppInput v-model="editForm.Nombre1" label="Nombre 1" required autocomplete="given-name" />

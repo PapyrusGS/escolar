@@ -44,6 +44,7 @@ class UsuarioService
                     'CI' => $payload['CI'],
                     'Telefono' => $payload['Telefono'],
                     'Correo' => $payload['Correo'],
+                    'CorreoPersonal' => $payload['CorreoPersonal'] ?? null,
                     'Contrasena' => Hash::make($payload['Contrasena']),
                     'FechaRegistro' => now(),
                     'Estado' => (bool) ($payload['Estado'] ?? true),
@@ -79,6 +80,7 @@ class UsuarioService
                 'CI' => $user->CI,
                 'Telefono' => $user->Telefono,
                 'Correo' => $user->Correo,
+                'CorreoPersonal' => $user->CorreoPersonal,
                 'FechaRegistro' => $user->FechaRegistro,
                 'Estado' => (bool)$user->Estado,
                 'Rol' => $user->rol,
@@ -106,6 +108,7 @@ class UsuarioService
                     'CI' => $payload['CI'],
                     'Telefono' => $payload['Telefono'],
                     'Correo' => $payload['Correo'],
+                    'CorreoPersonal' => $payload['CorreoPersonal'] ?? null,
                     'Estado' => (bool) ($payload['Estado'] ?? true),
                 ];
 

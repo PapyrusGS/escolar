@@ -32,6 +32,7 @@ class User extends Authenticatable
         'CI',
         'Telefono',
         'Correo',
+        'CorreoPersonal',
         'Contrasena',
         'FechaRegistro',
         'IdCarrera',

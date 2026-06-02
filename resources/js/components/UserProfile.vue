@@ -15,6 +15,8 @@ import {
   Layers,
   Eye,
   EyeOff,
+  AtSign,
+  Info,
 } from '@lucide/vue';
 import AppShell from './layout/AppShell.vue';
 import PageTransition from './layout/PageTransition.vue';
@@ -51,6 +53,7 @@ const form = ref({
   CI: '',
   Telefono: '',
   Correo: '',
+  CorreoPersonal: '',
   CarreraNombre: '',
   ModalidadNombre: '',
 });
@@ -108,13 +111,8 @@ const updateProfile = async () => {
   submitting.value = true;
   try {
     const payload = {
-      Nombre1: form.value.Nombre1,
-      Nombre2: form.value.Nombre2,
-      Apellido1: form.value.Apellido1,
-      Apellido2: form.value.Apellido2,
-      CI: form.value.CI,
       Telefono: form.value.Telefono,
-      Correo: form.value.Correo,
+      CorreoPersonal: form.value.CorreoPersonal || null,
     };
     const { data } = await axios.put('/api/auth/perfil', payload);
     const u = data?.data?.user;
@@ -122,7 +120,7 @@ const updateProfile = async () => {
       form.value = { ...form.value, ...u };
       localStorage.setItem('auth_user', JSON.stringify(u));
     }
-    successMsg.value = data?.message || 'Perfil actualizado correctamente.';
+    successMsg.value = data?.message || 'Datos de contacto actualizados correctamente.';
     toast.success(successMsg.value);
   } catch (err) {
     if (err?.response?.status === 422) {
@@ -217,44 +215,89 @@ const handleLogout = async () => {
           </nav>
 
           <div v-if="activeTab === 'datos'" class="up__panel">
-            <form class="up__form" @submit.prevent="updateProfile">
-              <div class="up__grid">
-                <AppInput v-model="form.Nombre1" label="Nombre 1" :icon="UserIcon" required autocomplete="given-name" />
-                <AppInput v-model="form.Nombre2" label="Nombre 2" autocomplete="additional-name" />
-                <AppInput v-model="form.Apellido1" label="Apellido 1" required autocomplete="family-name" />
-                <AppInput v-model="form.Apellido2" label="Apellido 2" autocomplete="family-name" />
-                <AppInput v-model="form.CI" label="CI" :icon="IdCard" required />
-                <AppInput v-model="form.Telefono" label="Teléfono" :icon="Phone" required />
-                <AppInput v-model="form.Correo" label="Correo electrónico" type="email" :icon="Mail" required autocomplete="email" />
-                <AppInput :model-value="roleLabel" label="Rol de acceso" disabled hint="Asignado por el administrador, no editable." />
-              </div>
-
-              <section v-if="isStudent" class="up__academic">
-                <header class="up__academic-head">
-                  <h3>
-                    <GraduationCap :size="18" />
-                    Información académica
-                  </h3>
-                  <AppBadge variant="student" size="sm">Estudiante</AppBadge>
-                </header>
-                <div class="up__academic-grid">
-                  <div class="up__academic-item">
-                    <span class="up__academic-label"><Layers :size="14" /> Carrera</span>
-                    <span class="up__academic-value">{{ form.CarreraNombre || 'No asignada' }}</span>
-                  </div>
-                  <div class="up__academic-item">
-                    <span class="up__academic-label"><KeyRound :size="14" /> Modalidad</span>
-                    <span class="up__academic-value">{{ form.ModalidadNombre || 'No asignada' }}</span>
-                  </div>
+            <AppCard padding="lg" class="up__ficha">
+              <header class="up__ficha-head">
+                <div class="up__ficha-title">
+                  <GraduationCap :size="20" />
+                  <h3>Ficha académica</h3>
                 </div>
-              </section>
+                <AppBadge variant="info" size="sm">
+                  <Lock :size="11" /> Solo lectura
+                </AppBadge>
+              </header>
 
-              <div class="up__actions">
-                <AppButton type="submit" variant="primary" :icon="Save" :loading="submitting">
-                  Guardar cambios
-                </AppButton>
+              <div class="up__ficha-grid">
+                <div class="up__ficha-item">
+                  <span class="up__ficha-label"><UserIcon :size="13" /> Nombre completo</span>
+                  <span class="up__ficha-value">{{ form.Nombre1 }} {{ form.Nombre2 || '' }} {{ form.Apellido1 }} {{ form.Apellido2 || '' }}</span>
+                </div>
+                <div class="up__ficha-item">
+                  <span class="up__ficha-label"><IdCard :size="13" /> CI</span>
+                  <span class="up__ficha-value">{{ form.CI || '—' }}</span>
+                </div>
+                <div class="up__ficha-item">
+                  <span class="up__ficha-label"><AtSign :size="13" /> Correo académico</span>
+                  <span class="up__ficha-value up__ficha-value--mono">{{ form.Correo || '—' }}</span>
+                </div>
+                <div class="up__ficha-item">
+                  <span class="up__ficha-label"><ShieldCheck :size="13" /> Rol de acceso</span>
+                  <span class="up__ficha-value">{{ roleLabel }}</span>
+                </div>
+                <template v-if="isStudent">
+                  <div class="up__ficha-item">
+                    <span class="up__ficha-label"><Layers :size="13" /> Carrera</span>
+                    <span class="up__ficha-value">{{ form.CarreraNombre || 'No asignada' }}</span>
+                  </div>
+                  <div class="up__ficha-item">
+                    <span class="up__ficha-label"><KeyRound :size="13" /> Modalidad</span>
+                    <span class="up__ficha-value">{{ form.ModalidadNombre || 'No asignada' }}</span>
+                  </div>
+                </template>
               </div>
-            </form>
+
+              <footer class="up__ficha-foot">
+                <Info :size="14" />
+                <span>Estos datos son administrados por el sistema. Para solicitar un cambio contacta al administrador.</span>
+              </footer>
+            </AppCard>
+
+            <AppCard padding="lg" class="up__contact">
+              <header class="up__contact-head">
+                <div class="up__contact-title">
+                  <Phone :size="20" />
+                  <h3>Datos de contacto</h3>
+                </div>
+                <p class="up__contact-hint">Edita tu información personal. Estos campos son privados y solo tú puedes modificarlos.</p>
+              </header>
+
+              <form class="up__form" @submit.prevent="updateProfile">
+                <div class="up__contact-grid">
+                  <AppInput
+                    v-model="form.CorreoPersonal"
+                    label="Correo personal"
+                    type="email"
+                    :icon="AtSign"
+                    autocomplete="email"
+                    placeholder="tu-correo-personal@ejemplo.com"
+                    hint="Opcional — se usará como canal de respaldo para notificaciones importantes."
+                  />
+                  <AppInput
+                    v-model="form.Telefono"
+                    label="Teléfono"
+                    :icon="Phone"
+                    required
+                    autocomplete="tel"
+                    placeholder="Ej. 70123456"
+                  />
+                </div>
+
+                <div class="up__actions">
+                  <AppButton type="submit" variant="primary" :icon="Save" :loading="submitting">
+                    Guardar cambios
+                  </AppButton>
+                </div>
+              </form>
+            </AppCard>
           </div>
 
           <div v-else class="up__panel">
@@ -425,18 +468,15 @@ const handleLogout = async () => {
 
 .up__panel {
   padding: 24px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .up__form {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.up__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
 }
 
 .up__security {
@@ -471,60 +511,124 @@ const handleLogout = async () => {
   background: var(--color-surface-3);
 }
 
-.up__academic {
-  background: rgba(28, 39, 66, 0.4);
+.up__ficha {
+  background:
+    linear-gradient(180deg, rgba(28, 39, 66, 0.55) 0%, rgba(19, 28, 48, 0.6) 100%);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
 }
 
-.up__academic-head {
+.up__ficha-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.up__academic-head h3 {
+.up__ficha-title {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  color: var(--color-primary);
+}
+
+.up__ficha-title h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.up__academic-grid {
+.up__ficha-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px 22px;
 }
 
-.up__academic-item {
+.up__ficha-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
-.up__academic-label {
+.up__ficha-label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text-muted);
   font-weight: 600;
 }
 
-.up__academic-value {
-  font-size: 1rem;
+.up__ficha-value {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.up__ficha-value--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+
+.up__ficha-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--color-border-subtle);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.up__contact {
+  background: linear-gradient(180deg, rgba(28, 39, 66, 0.45) 0%, rgba(19, 28, 48, 0.55) 100%);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.up__contact-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.up__contact-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-success);
+}
+
+.up__contact-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-primary);
+}
+
+.up__contact-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.up__contact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .up__actions {
@@ -536,8 +640,8 @@ const handleLogout = async () => {
 
 @media (max-width: 768px) {
   .up__hero { flex-direction: column; align-items: flex-start; text-align: left; padding: 22px; }
-  .up__grid { grid-template-columns: 1fr; }
-  .up__academic-grid { grid-template-columns: 1fr; }
+  .up__ficha-grid { grid-template-columns: 1fr; }
+  .up__contact-grid { grid-template-columns: 1fr; }
   .up__panel { padding: 18px; }
   .up__security { max-width: 100%; }
 }

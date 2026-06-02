@@ -46,6 +46,12 @@ class UpdateUsuarioRequest extends FormRequest
             'CI' => ['required', 'max:20', Rule::unique('usuarios', 'CI')->ignore($id, 'IdUsuario')],
             'Telefono' => ['required', 'max:20'],
             'Correo' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'Correo')->ignore($id, 'IdUsuario')],
+            'CorreoPersonal' => [
+                'nullable',
+                'email',
+                'max:100',
+                Rule::unique('usuarios', 'CorreoPersonal')->ignore($id, 'IdUsuario'),
+            ],
             'Contrasena' => ['nullable', 'string', 'min:6', 'confirmed'],
             'IdCarrera' => [
                 Rule::requiredIf($isStudent),

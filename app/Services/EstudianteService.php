@@ -9,7 +9,8 @@ class EstudianteService
 {
     // Inyección de dependencias del Repositorio (PHP 8.2+ promoted property)
     public function __construct(
-        protected readonly EstudianteRepository $estudianteRepo
+        protected readonly EstudianteRepository $estudianteRepo,
+        protected readonly \App\Repositories\MateriaAprobadaRepository $materiaAprobadaRepository
     ) {}
 
     /**
@@ -57,17 +58,25 @@ class EstudianteService
     /**
      * RF05 – Lógica para listar materias según la modalidad del estudiante
      */
-    public function listarMateriasDisponibles(int $idUsuario)
+    public function listarMateriasDisponibles(int $idUsuario): array
     {
         // 1. Conseguimos el registro académico del estudiante para sacar su modalidad
         $estudianteCarrera = $this->estudianteRepo->getModalidadEstudiante($idUsuario);
 
         if (!$estudianteCarrera) {
-            return [];
+            return [
+                'materias' => [],
+                'materias_aprobadas' => 0,
+            ];
         }
 
         // 2. Pasamos el IdModalidad correcto al repositorio
-        return $this->estudianteRepo->getMateriasPorModalidad($idUsuario, $estudianteCarrera->IdModalidad);
+        $materias = $this->estudianteRepo->getMateriasPorModalidad($idUsuario, $estudianteCarrera->IdModalidad);
+
+        return [
+            'materias' => $materias,
+            'materias_aprobadas' => $this->materiaAprobadaRepository->getApprovedCount($idUsuario),
+        ];
     }
 
     /**

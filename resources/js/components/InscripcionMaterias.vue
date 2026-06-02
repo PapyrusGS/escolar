@@ -18,6 +18,7 @@ import {
   Plus,
   AlertTriangle,
   GraduationCap,
+  Award,
 } from '@lucide/vue';
 import AppShell from './layout/AppShell.vue';
 import PageTransition from './layout/PageTransition.vue';
@@ -37,6 +38,7 @@ const { goTo } = useGoTo();
 
 const user = ref(null);
 const materias = ref([]);
+const materiasAprobadas = ref(0);
 const loading = ref(false);
 const submitting = ref(false);
 const searchQuery = ref('');
@@ -78,7 +80,9 @@ const loadMaterias = async () => {
   try {
     const { data } = await axios.get('/api/estudiante/cursos/disponibles');
     if (data?.status) {
-      materias.value = data.data || [];
+      const payload = data.data || {};
+      materias.value = payload.materias || [];
+      materiasAprobadas.value = Number(payload.materias_aprobadas || 0);
     } else {
       toast.error(data?.message || 'No se pudieron cargar las materias.');
     }
@@ -183,12 +187,31 @@ const handleLogout = async () => {
 
         <AppSpinner v-if="loading" :fullscreen="true" label="Cargando materias disponibles..." />
 
-        <AppEmptyState
-          v-else-if="filteredMaterias.length === 0"
-          :icon="Sparkles"
-          title="No hay materias disponibles para inscripción"
-          description="Verifica tu modalidad académica o contacta al administrador para revisar tu plan de estudios."
-        />
+        <template v-else-if="filteredMaterias.length === 0">
+          <div v-if="materiasAprobadas > 0" class="im__aprobadas-callout">
+            <div class="im__aprobadas-icon">
+              <Award :size="22" />
+            </div>
+            <div class="im__aprobadas-body">
+              <h4>Has aprobado {{ materiasAprobadas }} materia(s) de tu plan de estudios</h4>
+              <p>
+                Una materia aprobada no puede volver a cursarse. Los paralelos disponibles que ves aquí corresponden únicamente a materias que aún no has aprobado.
+              </p>
+            </div>
+          </div>
+          <AppEmptyState
+            v-if="materiasAprobadas > 0"
+            :icon="GraduationCap"
+            title="No hay paralelos disponibles para las materias restantes"
+            description="Espera a que la administración abra nuevos paralelos o contacta al administrador para revisar tu plan de estudios."
+          />
+          <AppEmptyState
+            v-else
+            :icon="Sparkles"
+            title="No hay materias disponibles para inscripción"
+            description="Verifica tu modalidad académica o contacta al administrador para revisar tu plan de estudios."
+          />
+        </template>
 
         <div v-else class="im__grid">
           <AppCard
@@ -270,6 +293,41 @@ const handleLogout = async () => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.im__aprobadas-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(6, 9, 18, 0.4) 100%);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-lg);
+}
+
+.im__aprobadas-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  flex-shrink: 0;
+}
+
+.im__aprobadas-body h4 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.im__aprobadas-body p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 .im__filters {

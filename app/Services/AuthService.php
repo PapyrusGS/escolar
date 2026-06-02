@@ -90,15 +90,16 @@ class AuthService
     public function updateProfile(User $usuario, array $payload): array
     {
         try {
-            $this->usuarioRepository->update($usuario->IdUsuario, [
-                'Nombre1' => $payload['Nombre1'],
-                'Nombre2' => $payload['Nombre2'] ?? null,
-                'Apellido1' => $payload['Apellido1'],
-                'Apellido2' => $payload['Apellido2'] ?? null,
-                'CI' => $payload['CI'],
-                'Telefono' => $payload['Telefono'],
-                'Correo' => $payload['Correo'],
-            ]);
+            $allowed = array_intersect_key($payload, array_flip(['Telefono', 'CorreoPersonal']));
+
+            $data = [
+                'Telefono' => $allowed['Telefono'] ?? null,
+                'CorreoPersonal' => array_key_exists('CorreoPersonal', $allowed) && $allowed['CorreoPersonal'] !== ''
+                    ? $allowed['CorreoPersonal']
+                    : null,
+            ];
+
+            $this->usuarioRepository->update($usuario->IdUsuario, $data);
 
             $updatedUser = $this->usuarioRepository->findById($usuario->IdUsuario);
 
@@ -160,6 +161,7 @@ class AuthService
             'CI' => $usuario->CI,
             'Telefono' => $usuario->Telefono,
             'Correo' => $usuario->Correo,
+            'CorreoPersonal' => $usuario->CorreoPersonal,
             'FechaRegistro' => optional($usuario->FechaRegistro)->toISOString(),
             'IdCarrera' => $usuario->IdCarrera,
             'Semestre' => $usuario->Semestre,

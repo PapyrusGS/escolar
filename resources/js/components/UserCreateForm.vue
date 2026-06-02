@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { UserPlus, RotateCcw, Save, ArrowLeft } from '@lucide/vue';
+import { UserPlus, RotateCcw, Save, ArrowLeft, AtSign } from '@lucide/vue';
 import AppShell from './layout/AppShell.vue';
 import PageTransition from './layout/PageTransition.vue';
 import AppCard from './ui/AppCard.vue';
@@ -27,6 +27,7 @@ const form = ref({
   IdCarrera: '',
   IdModalidad: '',
   Correo: '',
+  CorreoPersonal: '',
   CI: '',
   Telefono: '',
   Nombre1: '',
@@ -93,7 +94,7 @@ const submit = async () => {
 const reset = (clearMessage = true) => {
   form.value = {
     IdRol: '', IdCarrera: '', IdModalidad: '',
-    Correo: '', CI: '', Telefono: '',
+    Correo: '', CorreoPersonal: '', CI: '', Telefono: '',
     Nombre1: '', Nombre2: '', Apellido1: '', Apellido2: '',
     Contrasena: '', Contrasena_confirmation: '',
   };
@@ -134,7 +135,8 @@ const handleLogout = async () => {
               <AppSelect v-if="isStudent" v-model="form.IdCarrera" label="Carrera" :options="carreras" required placeholder="Seleccione una carrera" />
               <AppSelect v-if="isStudent" v-model="form.IdModalidad" label="Modalidad" :options="modalidades" required placeholder="Seleccione una modalidad" />
 
-              <AppInput v-model="form.Correo" label="Correo" type="email" required autocomplete="email" />
+              <AppInput v-model="form.Correo" label="Correo académico" type="email" required autocomplete="email" hint="Correo institucional usado para iniciar sesión." />
+              <AppInput v-model="form.CorreoPersonal" label="Correo personal" type="email" :icon="AtSign" autocomplete="email" placeholder="Opcional — correo de respaldo" />
               <AppInput v-model="form.CI" label="CI" type="text" required />
               <AppInput v-model="form.Telefono" label="Teléfono" type="text" required />
               <AppInput v-model="form.Nombre1" label="Nombre 1" type="text" required autocomplete="given-name" />

@@ -284,6 +284,7 @@ class DashboardService
         $totalInscritos = 0;
         $totalCursando = 0;
         $totalAprobados = 0;
+        $materiasAprobadasCount = 0;
         $progresoPorcentaje = 0;
         $estadoPeriodo = 'Sin materias activas';
         $recentEnrollments = [];
@@ -291,6 +292,11 @@ class DashboardService
         $fechaFinPeriodo = null;
 
         if ($studentCareer && $idEstudianteCarrera > 0) {
+            $materiasAprobadasCount = DB::table('materias_aprobadas')
+                ->where('IdUsuario', $idUsuario)
+                ->where('Estado', true)
+                ->count();
+
             $materiasVigentesRaw = DB::table('inscripciones as i')
                 ->join('cursos_materias as cm', 'i.IdCursoMateria', '=', 'cm.IdCursoMateria')
                 ->join('materias as m', 'cm.IdMateria', '=', 'm.IdMateria')
@@ -437,6 +443,7 @@ class DashboardService
                 ['titulo' => 'Materias Inscritas', 'valor' => (int) $totalInscritos, 'variant' => 'primary'],
                 ['titulo' => 'Materias en Curso', 'valor' => (int) $totalCursando, 'variant' => 'info'],
                 ['titulo' => 'Materias Aprobadas', 'valor' => (int) $totalAprobados, 'variant' => 'success'],
+                ['titulo' => 'Materias Aprobadas (Histórico)', 'valor' => (int) ($materiasAprobadasCount ?? 0), 'variant' => 'student'],
             ],
             'materiasInscritas' => $materiasInscritas,
             'materiasActivas' => array_values(array_filter($materiasInscritas, fn($m) => $m['Estado'] === 'En curso')),

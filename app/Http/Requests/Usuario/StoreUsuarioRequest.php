@@ -25,6 +25,7 @@ class StoreUsuarioRequest extends FormRequest
             'CI' => ['required', 'string', 'max:20', Rule::unique('usuarios', 'CI')],
             'Telefono' => ['required', 'string', 'max:20'],
             'Correo' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'Correo')],
+            'CorreoPersonal' => ['nullable', 'email', 'max:100', Rule::unique('usuarios', 'CorreoPersonal')],
             'Contrasena' => ['required', 'string', 'min:6', 'confirmed'],
             'IdCarrera' => [
                 Rule::requiredIf($isStudent),

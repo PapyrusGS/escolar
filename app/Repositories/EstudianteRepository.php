@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\DB;
 
 class EstudianteRepository
 {
+    public function __construct(
+        private readonly MateriaAprobadaRepository $materiaAprobadaRepository
+    ) {
+    }
+
     /**
      * RF03 - Busca los datos del estudiante cruzando con su rol y modalidad
      */
@@ -81,6 +86,10 @@ class EstudianteRepository
             ->where('Estado', 1)
             ->pluck('IdCursoMateria');
 
+        // 2b. Materias que el estudiante ya aprobó en cualquier paralelo previo.
+        // Si ya aprobó la materia (no solo un paralelo), no debe poder volver a inscribirse a otro paralelo de la misma materia.
+        $aprobadasIds = $this->materiaAprobadaRepository->getApprovedMateriaIds($idUsuario);
+
         // 3. Traemos los IDs de las materias que pertenecen al Pensum asociado a esa Modalidad y Carrera
         $materiasPensumIds = DB::table('carreramateriapensum')
             ->join('pensum', 'carreramateriapensum.IdPensum', '=', 'pensum.IdPensum')
@@ -95,6 +104,7 @@ class EstudianteRepository
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->join('turnos', 'cursos_materias.IdTurno', '=', 'turnos.IdTurno')
             ->whereNotIn('cursos_materias.IdCursoMateria', $inscritasIds)
+            ->whereNotIn('cursos_materias.IdMateria', $aprobadasIds) // Excluir materias ya aprobadas
             ->whereIn('cursos_materias.IdMateria', $materiasPensumIds) // Que pertenezca a sus materias permitidas
             ->where('cursos_materias.Estado', 1)
             
