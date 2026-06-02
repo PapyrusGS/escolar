@@ -1,595 +1,850 @@
-<template>
-  <section class="cursos-management">
-    <header class="cursos-management__header">
-      <div>
-        <p class="eyebrow">RF04</p>
-        <h1>Gestión de cursos programados</h1>
-        <p>Programa materias, asigna docentes, aulas y turnos para el ciclo lectivo.</p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-create" @click="openCreateModal">Programar nuevo</button>
-        <a class="back-link" href="/index">Volver al panel</a>
-      </div>
-    </header>
-
-    <div v-if="message" class="alert" :class="`alert--${messageType}`">
-      {{ message }}
-      <button class="alert__close" @click="message = ''">&times;</button>
-    </div>
-
-    <!-- Filtros de Búsqueda -->
-    <div class="filters">
-      <input 
-        v-model="searchQuery" 
-        type="text" 
-        placeholder="Buscar por materia, docente o aula..." 
-        class="filters__search"
-      />
-      <select v-model="turnoFilter" class="filters__select">
-        <option value="">Todos los turnos</option>
-        <option v-for="turno in turnos" :key="turno.IdTurno" :value="turno.IdTurno">
-          {{ turno.Nombre }}
-        </option>
-      </select>
-    </div>
-
-    <!-- Tabla de Cursos Programados -->
-    <div class="table-container">
-      <table class="cursos-table">
-        <thead>
-          <tr>
-            <th>Materia / Asignatura</th>
-            <th>Aula / Ubicación</th>
-            <th>Docente Asignado</th>
-            <th>Turno / Horario</th>
-            <th>Vigencia (Inicio - Fin)</th>
-            <th>Cupos (Inscritos)</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredCursos.length === 0">
-            <td colspan="8" class="text-center py-8 text-gray">
-              {{ loading ? 'Cargando programación...' : 'No se encontraron cursos programados.' }}
-            </td>
-          </tr>
-          <tr v-for="cm in filteredCursos" :key="cm.IdCursoMateria">
-            <td>
-              <div class="materia-info">
-                <span class="materia-info__name">{{ cm.Materia?.Nombre }}</span>
-                <span class="materia-info__code">{{ cm.Materia?.CodigoMateria }}</span>
-              </div>
-            </td>
-            <td>
-              <div v-if="cm.Curso" class="classroom-info">
-                <span class="classroom-info__aula">Aula {{ cm.Curso.Aula }}</span>
-                <span class="subtext">Piso {{ cm.Curso.Piso }}</span>
-              </div>
-              <span v-else class="text-muted">—</span>
-            </td>
-            <td>
-              <span class="teacher-name">{{ cm.Docente?.Nombre || 'Sin docente asignado' }}</span>
-            </td>
-            <td>
-              <div v-if="cm.Turno" class="schedule-info">
-                <span class="badge badge--turno">{{ cm.Turno.Nombre }}</span>
-                <span class="subtext">{{ formatTime(cm.Turno.HoraInicio) }} - {{ formatTime(cm.Turno.HoraFin) }}</span>
-              </div>
-              <span v-else class="text-muted">—</span>
-            </td>
-            <td>
-              <div class="date-info">
-                <span>{{ formatDate(cm.FechaInicio) }}</span>
-                <span class="subtext">al {{ formatDate(cm.FechaFin) }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="slots-info">
-                <strong :class="{ 'text-danger': cm.Inscritos >= cm.MaxInscritos }">
-                  {{ cm.Inscritos }}
-                </strong>
-                <span class="subtext">de {{ cm.MaxInscritos }}</span>
-              </div>
-            </td>
-            <td>
-              <button 
-                class="status-btn" 
-                :class="cm.Estado ? 'status-btn--active' : 'status-btn--inactive'"
-                @click="toggleStatus(cm)"
-                :title="cm.Estado ? 'Desactivar curso' : 'Activar curso'"
-              >
-                {{ cm.Estado ? 'Activo' : 'Inactivo' }}
-              </button>
-            </td>
-            <td>
-              <div class="actions">
-                <button class="btn-edit" @click="openEditModal(cm)">Editar</button>
-                <button class="btn-delete" @click="confirmDelete(cm)">Eliminar</button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Modal de Crear / Editar Curso Programado -->
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-card">
-        <header class="modal-card__header">
-          <h2>{{ isEditing ? 'Editar Programación de Curso' : 'Programar Nuevo Curso' }}</h2>
-          <button class="btn-close-modal" @click="closeModal">&times;</button>
-        </header>
-        <div class="modal-card__body">
-          <div v-if="hasModalError" class="alert alert--error" style="margin-top: 0; margin-bottom: 20px; display: block;">
-            <div v-if="Array.isArray(modalError)">
-              <ul style="margin: 0; padding-left: 20px; text-align: left;">
-                <li v-for="(err, idx) in modalError" :key="idx">{{ err }}</li>
-              </ul>
-            </div>
-            <div v-else>
-              {{ modalError }}
-            </div>
-          </div>
-
-          <form @submit.prevent="saveCursoMateria" class="modal-form">
-            <div class="grid">
-              <label>
-                Materia / Asignatura
-                <select v-model="form.IdMateria" required>
-                  <option value="" disabled>Seleccione una materia</option>
-                  <option v-for="m in materias" :key="m.IdMateria" :value="m.IdMateria">
-                    [{{ m.CodigoMateria }}] {{ m.Nombre }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Aula / Ubicación Física
-                <select v-model="form.IdCurso" required>
-                  <option value="" disabled>Seleccione un aula</option>
-                  <option v-for="c in cursos" :key="c.IdCurso" :value="c.IdCurso">
-                    {{ c.Nombre }} (Piso {{ c.Piso }})
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Docente
-                <select v-model="form.IdDocente" required>
-                  <option value="" disabled>Seleccione un docente</option>
-                  <option v-for="d in docentes" :key="d.IdUsuario" :value="d.IdUsuario">
-                    {{ d.Nombre }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Turno / Horario
-                <select v-model="form.IdTurno" required>
-                  <option value="" disabled>Seleccione un turno</option>
-                  <option v-for="t in turnos" :key="t.IdTurno" :value="t.IdTurno">
-                    {{ t.Nombre }} ({{ formatTime(t.HoraInicio) }} - {{ formatTime(t.HoraFin) }})
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Fecha de Inicio
-                <input v-model="form.FechaInicio" type="date" required />
-              </label>
-
-              <label>
-                Fecha de Finalización
-                <input v-model="form.FechaFin" type="date" required />
-              </label>
-
-              <label>
-                Cupo Máximo de Alumnos
-                <input v-model.number="form.MaxInscritos" type="number" min="1" required />
-              </label>
-            </div>
-
-            <div class="modal-actions">
-              <button type="submit" class="btn-save" :disabled="modalSubmitting">
-                {{ modalSubmitting ? 'Guardando...' : 'Programar Curso' }}
-              </button>
-              <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de Confirmación de Eliminación -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-      <div class="modal-card modal-card--danger">
-        <header class="modal-card__header">
-          <h2>Confirmar Eliminación</h2>
-          <button class="btn-close-modal" @click="closeDeleteModal">&times;</button>
-        </header>
-        <div class="modal-card__body text-center">
-          <p>¿Está seguro de que desea eliminar la programación de esta materia?</p>
-          <div class="course-block">
-            <strong>{{ cmToDelete?.Materia?.Nombre }}</strong>
-            <span class="subtext">Docente: {{ cmToDelete?.Docente?.Nombre }}</span>
-            <span class="subtext">Aula: {{ cmToDelete?.Curso?.Aula }} (Piso {{ cmToDelete?.Curso?.Piso }})</span>
-          </div>
-          <p class="warning-text">
-            <strong>Aviso de seguridad:</strong> Esta acción no podrá deshacerse. Si hay alumnos inscritos en este curso programado, la eliminación física fallará por seguridad del registro escolar.
-          </p>
-          <div class="modal-actions">
-            <button class="btn-danger" @click="deleteCursoMateria" :disabled="modalSubmitting">
-              {{ modalSubmitting ? 'Eliminando...' : 'Eliminar Programación' }}
-            </button>
-            <button class="btn-cancel" @click="closeDeleteModal">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-</template>
-
-<script>
+<script setup>
+import { ref, computed, onMounted, nextTick } from 'vue';
 import axios from 'axios';
+import {
+  CalendarClock,
+  Plus,
+  Search,
+  ArrowLeft,
+  RefreshCw,
+  Pencil,
+  Trash2,
+  BookOpen,
+  MapPin,
+  User as UserIcon,
+  Clock,
+  Calendar,
+  Users,
+  Power,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  Hash,
+} from '@lucide/vue';
+import AppShell from './layout/AppShell.vue';
+import PageTransition from './layout/PageTransition.vue';
+import AppCard from './ui/AppCard.vue';
+import AppButton from './ui/AppButton.vue';
+import AppInput from './ui/AppInput.vue';
+import AppSelect from './ui/AppSelect.vue';
+import AppAlert from './ui/AppAlert.vue';
+import AppPageHeader from './ui/AppPageHeader.vue';
+import AppModal from './ui/AppModal.vue';
+import AppTable from './ui/AppTable.vue';
+import AppBadge from './ui/AppBadge.vue';
+import AppEmptyState from './ui/AppEmptyState.vue';
+import { toast } from '../lib/toast.js';
+import { useGsap } from '../composables/useGsap.js';
 
-export default {
-  name: 'CursosManagement',
-  data() {
-    return {
-      cursosMaterias: [],
-      cursos: [],
-      materias: [],
-      docentes: [],
-      turnos: [],
-      loading: false,
-      searchQuery: '',
-      turnoFilter: '',
-      message: '',
-      messageType: 'error',
-      
-      // Modal control
-      showModal: false,
-      isEditing: false,
-      modalSubmitting: false,
-      modalError: '',
-      form: {
-        IdCursoMateria: null,
-        IdCurso: '',
-        IdMateria: '',
-        IdDocente: '',
-        IdTurno: '',
-        FechaInicio: '',
-        FechaFin: '',
-        MaxInscritos: 40,
-      },
+const { staggerIn } = useGsap();
 
-      // Delete Modal
-      showDeleteModal: false,
-      cmToDelete: null,
-    };
-  },
-  computed: {
-    filteredCursos() {
-      const query = this.searchQuery.toLowerCase().trim();
-      return this.cursosMaterias.filter(cm => {
-        // Filtrar por Turno
-        if (this.turnoFilter && Number(cm.IdTurno) !== Number(this.turnoFilter)) {
-          return false;
-        }
-        // Filtrar por texto
-        if (!query) return true;
-        const materiaName = (cm.Materia?.Nombre || '').toLowerCase();
-        const materiaCode = (cm.Materia?.CodigoMateria || '').toLowerCase();
-        const teacherName = (cm.Docente?.Nombre || '').toLowerCase();
-        const aula = (cm.Curso?.Aula || '').toLowerCase();
-        return materiaName.includes(query) || materiaCode.includes(query) || teacherName.includes(query) || aula.includes(query);
-      });
-    },
-    hasModalError() {
-      if (!this.modalError) return false;
-      if (Array.isArray(this.modalError)) return this.modalError.length > 0;
-      return String(this.modalError).trim().length > 0;
-    }
-  },
-  mounted() {
-    this.init();
-  },
-  methods: {
-    async init() {
-      this.loading = true;
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-      } else {
-        window.location.href = '/';
-        return;
-      }
-      await Promise.all([
-        this.loadCursosMaterias(),
-        this.loadFormData()
-      ]);
-      this.loading = false;
-    },
-    async loadCursosMaterias() {
-      try {
-        const { data } = await axios.get('/api/cursos-materias');
-        this.cursosMaterias = data?.data ?? [];
-      } catch (error) {
-        this.setMessage('No se pudo cargar la programación de los cursos.', 'error');
-      }
-    },
-    async loadFormData() {
-      try {
-        const { data } = await axios.get('/api/cursos-materias/form-data');
-        this.cursos = data?.cursos ?? [];
-        this.materias = data?.materias ?? [];
-        this.docentes = data?.docentes ?? [];
-        this.turnos = data?.turnos ?? [];
-      } catch (error) {
-        console.error('Error al cargar datos auxiliares:', error);
-      }
-    },
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-    },
-    formatTime(timeString) {
-      if (!timeString) return '';
-      return timeString.substring(0, 5); // Remueve segundos
-    },
-    openCreateModal() {
-      this.isEditing = false;
-      this.modalError = null;
-      this.form = {
-        IdCursoMateria: null,
-        IdCurso: '',
-        IdMateria: '',
-        IdDocente: '',
-        IdTurno: '',
-        FechaInicio: '',
-        FechaFin: '',
-        MaxInscritos: 40,
-      };
-      this.showModal = true;
-    },
-    openEditModal(cm) {
-      this.isEditing = true;
-      this.modalError = null;
-      this.form = {
-        IdCursoMateria: cm.IdCursoMateria,
-        IdCurso: cm.IdCurso,
-        IdMateria: cm.IdMateria,
-        IdDocente: cm.IdDocente,
-        IdTurno: cm.IdTurno,
-        FechaInicio: cm.FechaInicio ? cm.FechaInicio.substring(0, 10) : '',
-        FechaFin: cm.FechaFin ? cm.FechaFin.substring(0, 10) : '',
-        MaxInscritos: cm.MaxInscritos,
-      };
-      this.showModal = true;
-    },
-    closeModal() {
-      this.showModal = false;
-      this.modalError = null;
-    },
-    async saveCursoMateria() {
-      this.modalError = null;
-      this.message = '';
+const user = ref(null);
+const cursosMaterias = ref([]);
+const cursos = ref([]);
+const materias = ref([]);
+const docentes = ref([]);
+const turnos = ref([]);
+const loading = ref(false);
+const submitting = ref(false);
+const searchQuery = ref('');
+const turnoFilter = ref('');
 
-      // Validaciones más seguras y específicas en el cliente
-      const errors = [];
-      if (!this.form.IdMateria) errors.push('Debe seleccionar una Materia/Asignatura.');
-      if (!this.form.IdCurso) errors.push('Debe seleccionar un Aula/Ubicación Física.');
-      if (!this.form.IdDocente) errors.push('Debe seleccionar un Docente.');
-      if (!this.form.IdTurno) errors.push('Debe seleccionar un Turno/Horario.');
-      
-      if (!this.form.FechaInicio) {
-        errors.push('La fecha de inicio de vigencia es requerida.');
-      }
-      if (!this.form.FechaFin) {
-        errors.push('La fecha de finalización de vigencia es requerida.');
-      }
+const showFormModal = ref(false);
+const showDeleteModal = ref(false);
+const isEditing = ref(false);
+const cmToDelete = ref(null);
+const formErrors = ref([]);
 
-      if (this.form.FechaInicio && this.form.FechaFin) {
-        const start = new Date(this.form.FechaInicio);
-        const end = new Date(this.form.FechaFin);
-        
-        if (isNaN(start.getTime())) {
-          errors.push('La fecha de inicio ingresada no es válida.');
-        }
-        if (isNaN(end.getTime())) {
-          errors.push('La fecha de finalización ingresada no es válida.');
-        }
-        
-        if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
-          errors.push('Conflicto de vigencia: La fecha de finalización (Fin) no puede ser anterior a la fecha de inicio.');
-        }
-      }
+function emptyForm() {
+  return {
+    IdCursoMateria: null,
+    IdCurso: '',
+    IdMateria: '',
+    IdDocente: '',
+    IdTurno: '',
+    FechaInicio: '',
+    FechaFin: '',
+    MaxInscritos: 40,
+  };
+}
 
-      if (this.form.MaxInscritos === null || this.form.MaxInscritos === undefined || this.form.MaxInscritos < 1) {
-        errors.push('El cupo máximo de inscritos debe ser mayor o igual a 1.');
-      }
+const form = ref(emptyForm());
 
-      if (errors.length > 0) {
-        this.modalError = errors;
-        return;
-      }
+const turnoOptions = computed(() =>
+  turnos.value.map((t) => ({
+    Id: t.IdTurno,
+    Nombre: `${t.Nombre} (${formatTime(t.HoraInicio)} - ${formatTime(t.HoraFin)})`,
+  }))
+);
+const materiaOptions = computed(() =>
+  materias.value.map((m) => ({ Id: m.IdMateria, Nombre: `[${m.CodigoMateria}] ${m.Nombre}` }))
+);
+const cursoOptions = computed(() =>
+  cursos.value.map((c) => ({ Id: c.IdCurso, Nombre: `${c.Nombre} (Piso ${c.Piso})` }))
+);
+const docenteOptions = computed(() =>
+  docentes.value.map((d) => ({ Id: d.IdUsuario, Nombre: d.Nombre }))
+);
 
-      this.modalSubmitting = true;
-      try {
-        const payload = { ...this.form };
+const filteredCursos = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim();
+  return cursosMaterias.value.filter((cm) => {
+    if (turnoFilter.value && Number(cm.IdTurno) !== Number(turnoFilter.value)) return false;
+    if (!query) return true;
+    const materiaName = (cm.Materia?.Nombre || '').toLowerCase();
+    const materiaCode = (cm.Materia?.CodigoMateria || '').toLowerCase();
+    const teacher = (cm.Docente?.Nombre || '').toLowerCase();
+    const aula = (cm.Curso?.Aula || '').toLowerCase();
+    return materiaName.includes(query) || materiaCode.includes(query) || teacher.includes(query) || aula.includes(query);
+  });
+});
 
-        if (this.isEditing) {
-          const { data } = await axios.put(`/api/cursos-materias/${this.form.IdCursoMateria}`, payload);
-          this.setMessage(data?.message || 'Curso agendado actualizado correctamente.', 'success');
-        } else {
-          const { data } = await axios.post('/api/cursos-materias', payload);
-          this.setMessage(data?.message || 'Curso agendado programado correctamente.', 'success');
-        }
-        
-        this.closeModal();
-        await this.loadCursosMaterias();
-      } catch (error) {
-        if (error?.response?.status === 422) {
-          const apiErrors = error.response?.data?.errors;
-          if (apiErrors && typeof apiErrors === 'object') {
-            this.modalError = Object.values(apiErrors).flat();
-          } else {
-            this.modalError = [error.response?.data?.message || 'Datos de entrada inválidos.'];
-          }
-        } else {
-          this.modalError = [error?.response?.data?.message || 'Ocurrió un error al guardar los cambios del curso.'];
-        }
-      } finally {
-        this.modalSubmitting = false;
-      }
-    },
-    async toggleStatus(cm) {
-      try {
-        const { data } = await axios.patch(`/api/cursos-materias/${cm.IdCursoMateria}/toggle-status`);
-        cm.Estado = !cm.Estado;
-        this.setMessage(data?.message || 'Estado del curso actualizado.', 'success');
-      } catch (error) {
-        this.setMessage(error?.response?.data?.message || 'No se pudo actualizar el estado.', 'error');
-      }
-    },
-    confirmDelete(cm) {
-      this.cmToDelete = cm;
-      this.showDeleteModal = true;
-    },
-    closeDeleteModal() {
-      this.showDeleteModal = false;
-      this.cmToDelete = null;
-    },
-    async deleteCursoMateria() {
-      this.modalSubmitting = true;
-      this.message = '';
+const stats = computed(() => {
+  const total = cursosMaterias.value.length;
+  const active = cursosMaterias.value.filter((c) => c.Estado).length;
+  const inactive = total - active;
+  const full = cursosMaterias.value.filter((c) => Number(c.Inscritos) >= Number(c.MaxInscritos)).length;
+  return { total, active, inactive, full };
+});
 
-      try {
-        const { data } = await axios.delete(`/api/cursos-materias/${this.cmToDelete.IdCursoMateria}`);
-        // Determinar el tipo de alerta según la acción tomada (desactivado vs eliminado)
-        const msgType = data?.action === 'deactivated' ? 'warning' : 'success';
-        this.setMessage(data?.message || 'Curso programado procesado correctamente.', msgType);
-        this.closeDeleteModal();
-        await this.loadCursosMaterias();
-      } catch (error) {
-        const responseMsg = error?.response?.data?.message;
-        this.setMessage(responseMsg || 'No se pudo procesar la eliminación del curso programado.', 'error');
-        this.closeDeleteModal();
-      } finally {
-        this.modalSubmitting = false;
-      }
-    },
-    setMessage(message, type = 'error') {
-      this.message = message;
-      this.messageType = type;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+const page = ref(1);
+const pageSize = 8;
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredCursos.value.length / pageSize)));
+const paginatedCursos = computed(() => {
+  const start = (page.value - 1) * pageSize;
+  return filteredCursos.value.slice(start, start + pageSize);
+});
+const pageRange = computed(() => {
+  const from = filteredCursos.value.length === 0 ? 0 : (page.value - 1) * pageSize + 1;
+  const to = Math.min(page.value * pageSize, filteredCursos.value.length);
+  return { from, to };
+});
+
+const goToPage = (p) => {
+  if (p < 1 || p > totalPages.value) return;
+  page.value = p;
+};
+
+const columns = [
+  { key: 'materia', label: 'Materia', width: '20%' },
+  { key: 'aula', label: 'Aula', width: '12%' },
+  { key: 'docente', label: 'Docente', width: '16%' },
+  { key: 'turno', label: 'Turno', width: '14%' },
+  { key: 'vigencia', label: 'Vigencia', width: '14%' },
+  { key: 'cupos', label: 'Cupos', align: 'center', width: '10%' },
+  { key: 'status', label: 'Estado', align: 'center', width: '8%' },
+  { key: 'actions', label: 'Acciones', align: 'right', width: '6%' },
+];
+
+onMounted(async () => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    window.location.href = '/';
+    return;
+  }
+  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+  const stored = localStorage.getItem('auth_user');
+  if (stored) user.value = JSON.parse(stored);
+
+  await init();
+  await nextTick();
+  staggerIn('.cm-row', { delay: 0.05 });
+});
+
+const init = async () => {
+  loading.value = true;
+  try {
+    await Promise.all([loadCursosMaterias(), loadFormData()]);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadCursosMaterias = async () => {
+  try {
+    const { data } = await axios.get('/api/cursos-materias');
+    cursosMaterias.value = data?.data ?? data ?? [];
+    page.value = 1;
+  } catch (err) {
+    toast.error('No se pudo cargar la programación de los cursos');
+  }
+};
+
+const loadFormData = async () => {
+  try {
+    const { data } = await axios.get('/api/cursos-materias/form-data');
+    cursos.value = data?.cursos ?? [];
+    materias.value = data?.materias ?? [];
+    docentes.value = data?.docentes ?? [];
+    turnos.value = data?.turnos ?? [];
+  } catch (err) {
+    console.error('Error al cargar datos auxiliares:', err);
+  }
+};
+
+const formatDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+const formatTime = (t) => (t ? t.substring(0, 5) : '');
+
+const openCreate = () => {
+  isEditing.value = false;
+  formErrors.value = [];
+  form.value = emptyForm();
+  showFormModal.value = true;
+};
+
+const openEdit = (cm) => {
+  isEditing.value = true;
+  formErrors.value = [];
+  form.value = {
+    IdCursoMateria: cm.IdCursoMateria,
+    IdCurso: cm.IdCurso,
+    IdMateria: cm.IdMateria,
+    IdDocente: cm.IdDocente,
+    IdTurno: cm.IdTurno,
+    FechaInicio: cm.FechaInicio ? cm.FechaInicio.substring(0, 10) : '',
+    FechaFin: cm.FechaFin ? cm.FechaFin.substring(0, 10) : '',
+    MaxInscritos: cm.MaxInscritos,
+  };
+  showFormModal.value = true;
+};
+
+const closeFormModal = () => {
+  showFormModal.value = false;
+  formErrors.value = [];
+};
+
+const validateForm = () => {
+  const errors = [];
+  if (!form.value.IdMateria) errors.push('Seleccione una materia/asignatura.');
+  if (!form.value.IdCurso) errors.push('Seleccione un aula/ubicación.');
+  if (!form.value.IdDocente) errors.push('Seleccione un docente.');
+  if (!form.value.IdTurno) errors.push('Seleccione un turno/horario.');
+  if (!form.value.FechaInicio) errors.push('La fecha de inicio es obligatoria.');
+  if (!form.value.FechaFin) errors.push('La fecha de finalización es obligatoria.');
+  if (form.value.FechaInicio && form.value.FechaFin) {
+    const start = new Date(form.value.FechaInicio);
+    const end = new Date(form.value.FechaFin);
+    if (isNaN(start.getTime())) errors.push('La fecha de inicio no es válida.');
+    if (isNaN(end.getTime())) errors.push('La fecha de finalización no es válida.');
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
+      errors.push('La fecha de fin no puede ser anterior a la fecha de inicio.');
     }
   }
+  if (!form.value.MaxInscritos || form.value.MaxInscritos < 1) {
+    errors.push('El cupo máximo debe ser mayor o igual a 1.');
+  }
+  return errors;
+};
+
+const submit = async () => {
+  formErrors.value = validateForm();
+  if (formErrors.value.length) {
+    toast.error('Revisa los campos del formulario');
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    const payload = { ...form.value };
+    let response;
+    if (isEditing.value) {
+      response = await axios.put(`/api/cursos-materias/${form.value.IdCursoMateria}`, payload);
+    } else {
+      response = await axios.post('/api/cursos-materias', payload);
+    }
+    toast.success(response?.data?.message || 'Programación guardada');
+    closeFormModal();
+    await loadCursosMaterias();
+    await nextTick();
+    staggerIn('.cm-row', { delay: 0.05 });
+  } catch (err) {
+    if (err?.response?.status === 422) {
+      const apiErrors = err.response?.data?.errors;
+      formErrors.value = apiErrors ? Object.values(apiErrors).flat() : [err.response?.data?.message || 'Datos inválidos.'];
+    } else {
+      formErrors.value = [err?.response?.data?.message || 'No se pudo guardar la programación.'];
+    }
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const toggleStatus = async (cm) => {
+  const previous = cm.Estado;
+  cm.Estado = !previous;
+  try {
+    const { data } = await axios.patch(`/api/cursos-materias/${cm.IdCursoMateria}/toggle-status`);
+    cm.Estado = data?.Estado ?? !previous;
+    toast.success(data?.message || 'Estado actualizado');
+  } catch (err) {
+    cm.Estado = previous;
+    toast.error(err?.response?.data?.message || 'No se pudo actualizar el estado');
+  }
+};
+
+const confirmDelete = (cm) => {
+  cmToDelete.value = cm;
+  showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  cmToDelete.value = null;
+};
+
+const submitDelete = async () => {
+  if (!cmToDelete.value) return;
+  submitting.value = true;
+  try {
+    const { data } = await axios.delete(`/api/cursos-materias/${cmToDelete.value.IdCursoMateria}`);
+    const variant = data?.action === 'deactivated' ? 'warning' : 'success';
+    toast.show(data?.message || 'Programación procesada', variant);
+    closeDeleteModal();
+    await loadCursosMaterias();
+    await nextTick();
+    staggerIn('.cm-row', { delay: 0.05 });
+  } catch (err) {
+    toast.error(err?.response?.data?.message || 'No se pudo procesar la eliminación');
+    closeDeleteModal();
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const refresh = async () => {
+  await init();
+  await nextTick();
+  staggerIn('.cm-row', { delay: 0.05 });
+  toast.info('Lista actualizada');
+};
+
+const handleLogout = async () => {
+  try {
+    if (localStorage.getItem('auth_token')) await axios.post('/api/auth/logout');
+  } catch {}
+  localStorage.clear();
+  delete axios.defaults.headers.common.Authorization;
+  window.location.href = '/';
 };
 </script>
 
+<template>
+  <AppShell v-if="user" :user="user" page-title="Gestión de cursos" @logout="handleLogout">
+    <PageTransition>
+      <div class="cm">
+        <AppPageHeader
+          eyebrow="RF04 · Módulo académico"
+          title="Gestión de cursos programados"
+          description="Programa materias, asigna docentes, aulas y turnos para el ciclo lectivo."
+        >
+          <template #actions>
+            <AppButton variant="secondary" :icon="RefreshCw" @click="refresh">Actualizar</AppButton>
+            <AppButton variant="primary" :icon="Plus" @click="openCreate">Programar nuevo</AppButton>
+          </template>
+        </AppPageHeader>
+
+        <section class="cm__stats">
+          <AppCard padding="sm" class="cm__stat">
+            <div class="cm__stat-icon cm__stat-icon--primary"><CalendarClock :size="20" /></div>
+            <div>
+              <p class="cm__stat-label">Total cursos</p>
+              <p class="cm__stat-value">{{ stats.total }}</p>
+            </div>
+          </AppCard>
+          <AppCard padding="sm" class="cm__stat">
+            <div class="cm__stat-icon cm__stat-icon--success"><Power :size="20" /></div>
+            <div>
+              <p class="cm__stat-label">Activos</p>
+              <p class="cm__stat-value">{{ stats.active }}</p>
+            </div>
+          </AppCard>
+          <AppCard padding="sm" class="cm__stat">
+            <div class="cm__stat-icon cm__stat-icon--danger"><AlertTriangle :size="20" /></div>
+            <div>
+              <p class="cm__stat-label">Inactivos</p>
+              <p class="cm__stat-value">{{ stats.inactive }}</p>
+            </div>
+          </AppCard>
+          <AppCard padding="sm" class="cm__stat">
+            <div class="cm__stat-icon cm__stat-icon--warning"><Users :size="20" /></div>
+            <div>
+              <p class="cm__stat-label">Cupo lleno</p>
+              <p class="cm__stat-value">{{ stats.full }}</p>
+            </div>
+          </AppCard>
+        </section>
+
+        <AppCard padding="md">
+          <div class="cm__filters">
+            <AppInput
+              v-model="searchQuery"
+              type="text"
+              placeholder="Buscar por materia, docente o aula..."
+              :icon="Search"
+              @update:modelValue="page = 1"
+            />
+            <AppSelect
+              v-model="turnoFilter"
+              :options="turnoOptions"
+              placeholder="Todos los turnos"
+              @update:modelValue="page = 1"
+            />
+          </div>
+
+          <AppTable
+            :columns="columns"
+            :rows="paginatedCursos"
+            :loading="loading"
+            row-key="IdCursoMateria"
+            empty-title="Sin cursos programados"
+            empty-description="Aún no se ha programado ningún curso para este ciclo lectivo."
+          >
+            <template #cell-materia="{ row }">
+              <div class="cm__materia">
+                <div class="cm__materia-icon"><BookOpen :size="18" /></div>
+                <div>
+                  <strong>{{ row.Materia?.Nombre || '—' }}</strong>
+                  <span class="cm__materia-code"><Hash :size="11" /> {{ row.Materia?.CodigoMateria }}</span>
+                </div>
+              </div>
+            </template>
+
+            <template #cell-aula="{ row }">
+              <template v-if="row.Curso">
+                <div class="cm__aula">
+                  <span class="cm__aula-name"><MapPin :size="13" /> {{ row.Curso.Aula }}</span>
+                  <span class="cm__aula-piso">Piso {{ row.Curso.Piso }}</span>
+                </div>
+              </template>
+              <span v-else class="cm__muted">—</span>
+            </template>
+
+            <template #cell-docente="{ row }">
+              <div class="cm__docente">
+                <UserIcon :size="14" />
+                <span>{{ row.Docente?.Nombre || 'Sin asignar' }}</span>
+              </div>
+            </template>
+
+            <template #cell-turno="{ row }">
+              <template v-if="row.Turno">
+                <AppBadge variant="primary" size="sm"><Clock :size="11" /> {{ row.Turno.Nombre }}</AppBadge>
+                <p class="cm__turno-time">{{ formatTime(row.Turno.HoraInicio) }} - {{ formatTime(row.Turno.HoraFin) }}</p>
+              </template>
+              <span v-else class="cm__muted">—</span>
+            </template>
+
+            <template #cell-vigencia="{ row }">
+              <div class="cm__vigencia">
+                <span class="cm__vigencia-date"><Calendar :size="12" /> {{ formatDate(row.FechaInicio) }}</span>
+                <span class="cm__vigencia-sub">al {{ formatDate(row.FechaFin) }}</span>
+              </div>
+            </template>
+
+            <template #cell-cupos="{ row }">
+              <div class="cm__cupos">
+                <strong :class="Number(row.Inscritos) >= Number(row.MaxInscritos) ? 'cm__cupos-full' : 'cm__cupos-ok'">
+                  {{ row.Inscritos }}
+                </strong>
+                <span class="cm__cupos-max">/ {{ row.MaxInscritos }}</span>
+              </div>
+            </template>
+
+            <template #cell-status="{ row }">
+              <button
+                type="button"
+                :class="['cm__status', row.Estado ? 'cm__status--active' : 'cm__status--inactive']"
+                :title="row.Estado ? 'Desactivar curso' : 'Activar curso'"
+                @click="toggleStatus(row)"
+              >
+                <span :class="['cm__status-dot', row.Estado ? 'cm__status-dot--on' : 'cm__status-dot--off']" aria-hidden="true"></span>
+                {{ row.Estado ? 'Activo' : 'Inactivo' }}
+              </button>
+            </template>
+
+            <template #cell-actions="{ row }">
+              <div class="cm__actions">
+                <AppButton variant="ghost" size="sm" :icon="Pencil" aria-label="Editar" @click="openEdit(row)" />
+                <AppButton variant="ghost" size="sm" :icon="Trash2" aria-label="Eliminar" @click="confirmDelete(row)" />
+              </div>
+            </template>
+
+            <template #empty>
+              <AppEmptyState
+                :icon="CalendarClock"
+                title="Sin cursos programados"
+                description="Crea la primera programación de curso para iniciar el ciclo."
+              >
+                <AppButton variant="primary" :icon="Plus" @click="openCreate">Programar curso</AppButton>
+              </AppEmptyState>
+            </template>
+          </AppTable>
+
+          <footer v-if="filteredCursos.length > 0" class="cm__pagination">
+            <p class="cm__pagination-info">
+              Mostrando <strong>{{ pageRange.from }}–{{ pageRange.to }}</strong> de <strong>{{ filteredCursos.length }}</strong> programaciones
+            </p>
+            <div class="cm__pagination-controls">
+              <AppButton variant="ghost" size="sm" :icon="ChevronLeft" :disabled="page === 1" @click="goToPage(page - 1)">Anterior</AppButton>
+              <span class="cm__pagination-page">Página {{ page }} / {{ totalPages }}</span>
+              <AppButton variant="ghost" size="sm" :icon-right="ChevronRight" :disabled="page === totalPages" @click="goToPage(page + 1)">Siguiente</AppButton>
+            </div>
+          </footer>
+        </AppCard>
+
+        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/index'">
+          Volver al panel principal
+        </AppButton>
+      </div>
+    </PageTransition>
+
+    <AppModal :open="showFormModal" :title="isEditing ? 'Editar programación' : 'Programar nuevo curso'" size="lg" @close="closeFormModal">
+      <form class="cm__form" @submit.prevent="submit">
+        <AppAlert v-if="formErrors.length" variant="danger" title="Revisa la información">
+          <ul class="cm__errors">
+            <li v-for="(err, i) in formErrors" :key="i">{{ err }}</li>
+          </ul>
+        </AppAlert>
+        <div class="cm__form-grid">
+          <AppSelect v-model="form.IdMateria" label="Materia / Asignatura" :options="materiaOptions" required placeholder="Seleccione una materia" />
+          <AppSelect v-model="form.IdCurso" label="Aula / Ubicación física" :options="cursoOptions" required placeholder="Seleccione un aula" />
+          <AppSelect v-model="form.IdDocente" label="Docente" :options="docenteOptions" required placeholder="Seleccione un docente" />
+          <AppSelect v-model="form.IdTurno" label="Turno / Horario" :options="turnoOptions" required placeholder="Seleccione un turno" />
+          <AppInput v-model="form.FechaInicio" label="Fecha de inicio" type="date" required />
+          <AppInput v-model="form.FechaFin" label="Fecha de finalización" type="date" required />
+          <AppInput v-model.number="form.MaxInscritos" label="Cupo máximo" type="number" :min="1" required hint="Número máximo de estudiantes inscritos." />
+        </div>
+      </form>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeFormModal">Cancelar</AppButton>
+        <AppButton variant="primary" :icon="CalendarClock" :loading="submitting" @click="submit">
+          {{ isEditing ? 'Guardar cambios' : 'Programar curso' }}
+        </AppButton>
+      </template>
+    </AppModal>
+
+    <AppModal :open="showDeleteModal" title="Confirmar eliminación" size="sm" @close="closeDeleteModal">
+      <div class="cm__delete">
+        <AppAlert variant="warning" title="Acción irreversible">
+          Si hay alumnos inscritos, la eliminación física fallará y el curso será desactivado por seguridad.
+        </AppAlert>
+        <div class="cm__delete-card">
+          <div class="cm__delete-icon"><BookOpen :size="20" /></div>
+          <div>
+            <strong>{{ cmToDelete?.Materia?.Nombre }}</strong>
+            <p class="cm__delete-meta">Docente: {{ cmToDelete?.Docente?.Nombre || '—' }}</p>
+            <p class="cm__delete-meta">Aula: {{ cmToDelete?.Curso?.Aula }} (Piso {{ cmToDelete?.Curso?.Piso }})</p>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeDeleteModal">Cancelar</AppButton>
+        <AppButton variant="danger" :icon="Trash2" :loading="submitting" @click="submitDelete">Eliminar programación</AppButton>
+      </template>
+    </AppModal>
+  </AppShell>
+</template>
+
 <style scoped>
-.cursos-management { min-height: 100vh; padding: 32px; background: linear-gradient(180deg, #07111f 0%, #101b2b 100%); color: #eef2ff; }
-.cursos-management__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
-.eyebrow { margin: 0 0 8px; color: #fbbf24; text-transform: uppercase; letter-spacing: .18em; font-size: .75rem; }
-h1 { margin: 0; font-size: 2rem; }
-p { margin: 8px 0 0; color: #cbd5e1; }
-.header-actions { display: flex; gap: 12px; }
-.back-link, .btn-create, .btn-save, .btn-cancel, .btn-danger { border-radius: 999px; padding: 12px 24px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.back-link { background: transparent; border: 1px solid rgba(148, 163, 184, .22); color: #cbd5e1; }
-.btn-create { background: #fbbf24; color: #0f172a; }
-
-.alert { position: relative; margin: 20px 0; padding: 16px 40px 16px 18px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; }
-.alert--success { background: rgba(16, 185, 129, .16); color: #d1fae5; border: 1px solid rgba(16, 185, 129, .3); }
-.alert--error { background: rgba(239, 68, 68, .16); color: #fecaca; border: 1px solid rgba(239, 68, 68, .3); }
-.alert--warning { background: rgba(245, 158, 11, .16); color: #fef3c7; border: 1px solid rgba(245, 158, 11, .3); }
-.alert--info { background: rgba(59, 130, 246, .16); color: #dbeafe; border: 1px solid rgba(59, 130, 246, .3); }
-.alert__close { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.5rem; color: inherit; cursor: pointer; }
-
-/* Filtros */
-.filters { display: flex; gap: 16px; margin-bottom: 24px; }
-.filters__search { flex: 1; border-radius: 14px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(30, 41, 59, .82); color: #f8fafc; padding: 12px 16px; font-size: 1rem; outline: none; }
-.filters__select { width: 220px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(30, 41, 59, .82); color: #f8fafc; padding: 12px 16px; font-size: 1rem; outline: none; }
-.filters__search:focus, .filters__select:focus { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251, 191, 36, .18); }
-
-/* Tabla */
-.table-container { background: rgba(15, 23, 42, .86); border: 1px solid rgba(148, 163, 184, .18); border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); margin-bottom: 24px; }
-.cursos-table { width: 100%; border-collapse: collapse; text-align: left; }
-.cursos-table th { background: rgba(30, 41, 59, .5); color: #e2e8f0; font-weight: 700; padding: 16px 20px; border-bottom: 1px solid rgba(148, 163, 184, .12); }
-.cursos-table td { padding: 16px 20px; border-bottom: 1px solid rgba(148, 163, 184, .08); vertical-align: middle; }
-.cursos-table tbody tr:hover { background: rgba(255, 255, 255, .02); }
-
-.materia-info { display: flex; flex-direction: column; }
-.materia-info__name { font-weight: 700; color: #f8fafc; font-size: 1.05rem; }
-.materia-info__code { color: #fbbf24; font-weight: 600; font-family: monospace; font-size: 0.88rem; margin-top: 2px; }
-
-.classroom-info { display: flex; flex-direction: column; }
-.classroom-info__aula { font-weight: 700; color: #e2e8f0; }
-.subtext { color: #94a3b8; font-size: 0.82rem; }
-
-.teacher-name { color: #f8fafc; font-weight: 600; }
-
-.schedule-info { display: flex; flex-direction: column; gap: 4px; }
-.badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.badge--turno { background: rgba(139, 92, 246, .16); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, .3); align-self: flex-start; }
-
-.date-info { display: flex; flex-direction: column; color: #e2e8f0; }
-.slots-info { display: flex; flex-direction: column; }
-.slots-info strong { font-size: 1.15rem; color: #34d399; }
-.text-danger { color: #ef4444 !important; }
-
-/* Status button */
-.status-btn { padding: 6px 14px; border-radius: 999px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s ease; font-size: 0.82rem; }
-.status-btn--active { background: rgba(16, 185, 129, .16); color: #34d399; border: 1px solid rgba(16, 185, 129, .3); }
-.status-btn--active:hover { background: rgba(16, 185, 129, .28); }
-.status-btn--inactive { background: rgba(239, 68, 68, .16); color: #f87171; border: 1px solid rgba(239, 68, 68, .3); }
-.status-btn--inactive:hover { background: rgba(239, 68, 68, .28); }
-
-.actions { display: flex; gap: 8px; }
-.actions button { border-radius: 8px; padding: 6px 12px; font-weight: 700; border: none; cursor: pointer; font-size: 0.82rem; }
-.btn-edit { background: rgba(251, 191, 36, .16); color: #facc15; border: 1px solid rgba(251, 191, 36, .3); }
-.btn-edit:hover { background: rgba(251, 191, 36, .26); }
-.btn-delete { background: rgba(239, 68, 68, .16); color: #f87171; border: 1px solid rgba(239, 68, 68, .3); }
-.btn-delete:hover { background: rgba(239, 68, 68, .26); }
-
-/* Modal Styles */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(7, 11, 25, 0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(8px); }
-.modal-card { background: #0f172a; border: 1px solid rgba(148, 163, 184, .25); border-radius: 24px; width: 100%; max-width: 750px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); animation: zoomIn 0.25s ease-out; }
-.modal-card--danger { max-width: 500px; border-color: rgba(239, 68, 68, 0.4); }
-.modal-card__header { padding: 20px 24px; border-bottom: 1px solid rgba(148, 163, 184, .14); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, .4); }
-.modal-card__header h2 { margin: 0; font-size: 1.3rem; color: #f8fafc; }
-.btn-close-modal { background: transparent; border: none; color: #94a3b8; font-size: 2rem; cursor: pointer; line-height: 1; }
-.btn-close-modal:hover { color: #f8fafc; }
-.modal-card__body { padding: 24px; overflow-y: auto; max-height: 80vh; }
-
-.modal-form .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.modal-form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; color: #e2e8f0; font-size: 0.9rem; }
-.modal-form input, .modal-form select { border-radius: 12px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(30, 41, 59, .82); color: #f8fafc; padding: 12px 14px; font-size: 0.95rem; outline: none; }
-.modal-form input:focus, .modal-form select:focus { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251, 191, 36, .18); }
-
-.modal-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; }
-.btn-save { background: #fbbf24; color: #0f172a; }
-.btn-cancel { background: transparent; border: 1px solid rgba(148, 163, 184, .22); color: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #ffffff; }
-.btn-save:disabled, .btn-danger:disabled { opacity: 0.7; cursor: not-allowed; }
-
-.course-block { background: rgba(30, 41, 59, .6); border-radius: 16px; padding: 16px; margin: 16px 0; display: flex; flex-direction: column; align-items: center; border: 1px solid rgba(148, 163, 184, .12); gap: 4px; }
-.warning-text { color: #fca5a5; font-size: 0.88rem; line-height: 1.5; margin-top: 16px; }
-
-@keyframes zoomIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+.cm {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-@media (max-width: 900px) {
-  .cursos-management__header { flex-direction: column; align-items: stretch; gap: 20px; }
-  .filters { flex-direction: column; }
-  .filters__select { width: 100%; }
-  .modal-form .grid { grid-template-columns: 1fr; }
-  .cursos-table th:nth-child(2), .cursos-table td:nth-child(2),
-  .cursos-table th:nth-child(4), .cursos-table td:nth-child(4),
-  .cursos-table th:nth-child(5), .cursos-table td:nth-child(5) { display: none; }
+.cm__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cm__stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cm__stat-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.cm__stat-icon--success { background: var(--color-success-soft); color: var(--color-success); }
+.cm__stat-icon--danger { background: var(--color-danger-soft); color: var(--color-danger); }
+.cm__stat-icon--warning { background: var(--color-warning-soft); color: var(--color-warning); }
+
+.cm__stat-label {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.cm__stat-value {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.cm__filters {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.cm__materia {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cm__materia-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.cm__materia strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+.cm__materia-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.cm__aula {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cm__aula-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.cm__aula-piso {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.cm__docente {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--color-text-primary);
+}
+
+.cm__turno-time {
+  margin: 4px 0 0;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.cm__vigencia {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.cm__vigencia-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.cm__vigencia-sub {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.cm__cupos {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.cm__cupos-ok { color: var(--color-success); font-size: 1.05rem; font-weight: 800; }
+.cm__cupos-full { color: var(--color-danger); font-size: 1.05rem; font-weight: 800; }
+.cm__cupos-max { color: var(--color-text-muted); font-size: 0.82rem; }
+
+.cm__muted {
+  color: var(--color-text-muted);
+}
+
+.cm__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  background: transparent;
+  min-height: 32px;
+}
+
+.cm__status--active {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background: var(--color-success-soft);
+}
+.cm__status--active:hover { background: var(--color-success); color: white; }
+
+.cm__status--inactive {
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+}
+.cm__status--inactive:hover { background: var(--color-danger); color: white; }
+
+.cm__status-dot { width: 8px; height: 8px; border-radius: 50%; }
+.cm__status-dot--on { background: var(--color-success); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); }
+.cm__status-dot--off { background: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18); }
+
+.cm__actions {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.cm__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.cm__pagination-info {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.cm__pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cm__pagination-page {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  min-width: 96px;
+  text-align: center;
+}
+
+.cm__form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cm__form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cm__errors {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.cm__delete {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cm__delete-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.cm__delete-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.cm__delete-card strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.cm__delete-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 1024px) {
+  .cm__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cm__filters { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .cm__form-grid { grid-template-columns: 1fr; }
+  .cm__pagination { flex-direction: column; align-items: stretch; }
+  .cm__pagination-controls { justify-content: space-between; }
 }
 </style>

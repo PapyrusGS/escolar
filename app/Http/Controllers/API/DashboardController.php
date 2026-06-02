@@ -25,18 +25,23 @@ class DashboardController extends Controller
                 ], 401);
             }
 
+            // Invoca la lógica optimizada por roles del DashboardService
             $stats = $this->dashboardService->getStats((int) $user->IdUsuario, (int) $user->IdRol);
 
+            // Cumple estrictamente con el shape obligatorio: status, message y data
             return response()->json([
                 'status' => true,
+                'message' => 'Estadísticas del panel cargadas correctamente.',
                 'data' => $stats,
             ], 200);
+
         } catch (Throwable $e) {
             report($e);
 
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Error al procesar los datos del panel de control.',
+                'data' => null
             ], 500);
         }
     }

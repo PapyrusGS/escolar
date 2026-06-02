@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use RuntimeException;
 
 class DashboardService
@@ -11,6 +12,9 @@ class DashboardService
     public function getStats(int $idUsuario, int $idRol): array
     {
         try {
+            // Forzar idioma en español para las fechas legibles dinámicas (diffForHumans)
+            Carbon::setLocale('es');
+
             switch ($idRol) {
                 case 1:
                     return $this->getAdminStats();
@@ -51,7 +55,7 @@ class DashboardService
                 'tipo' => 'usuario',
                 'titulo' => 'Nuevo Usuario Registrado',
                 'descripcion' => "{$u->Nombre1} {$u->Apellido1} (CI: {$u->CI}) fue registrado como {$u->Rol}.",
-                'fecha' => $u->FechaRegistro,
+                'fecha' => Carbon::parse($u->FechaRegistro)->diffForHumans(),
             ])
             ->all();
 
@@ -72,7 +76,7 @@ class DashboardService
                 'tipo' => 'curso',
                 'titulo' => 'Nueva Materia Programada',
                 'descripcion' => "Se programó la materia {$c->Materia} ({$c->CodigoMateria}) en el Aula {$c->Aula}.",
-                'fecha' => $c->FechaRegistro,
+                'fecha' => Carbon::parse($c->FechaRegistro)->diffForHumans(),
             ])
             ->all();
 
@@ -130,7 +134,7 @@ class DashboardService
                 'tipo' => 'inscripcion',
                 'titulo' => 'Alumno Inscrito',
                 'descripcion' => "{$e->Nombre1} {$e->Apellido1} se inscribió en tu curso de {$e->Materia}.",
-                'fecha' => $e->Fecha,
+                'fecha' => Carbon::parse($e->Fecha)->diffForHumans(),
             ])
             ->all();
 
@@ -151,29 +155,72 @@ class DashboardService
 
     private function getEstudianteStats(int $idUsuario): array
     {
+        // 1. Obtener la carrera del estudiante acoplada a su modalidad real de la BD
         $studentCareer = DB::table('EstudianteCarrera')
-            ->where('IdUsuario', $idUsuario)
+            ->join('modalidad', 'EstudianteCarrera.IdModalidad', '=', 'modalidad.IdModalidad')
+            ->where('EstudianteCarrera.IdUsuario', $idUsuario)
+            ->where('EstudianteCarrera.Estado', 1)
+            ->select('EstudianteCarrera.IdEstudianteCarrera', 'modalidad.Nombre as Modalidad')
             ->first();
 
         $totalInscritos = 0;
         $totalAprobados = 0;
         $totalCursando = 0;
+        $progresoPorcentaje = 0;
         $recentEnrollments = [];
+        $nombreModalidad = 'No Asignada';
 
         if ($studentCareer) {
+            $nombreModalidad = $studentCareer->Modalidad;
+            $hoy = now()->toDateString();
+
+            // Total de Inscripciones del estudiante
             $enrollments = DB::table('inscripciones')
                 ->where('IdEstudiante', $studentCareer->IdEstudianteCarrera)
+                ->where('Estado', 1)
                 ->get();
 
             $totalInscritos = $enrollments->count();
+            
+            // Total de Materias Aprobadas (Buscando registros con bandera Aprobado = 1)
             $totalAprobados = $enrollments->where('Aprobado', true)->count();
-            $totalCursando = $enrollments->where('Aprobado', false)->count();
 
-            // Actividades Recientes: Últimas 5 inscripciones
+            // 2. Extraer las materias que el alumno está cursando basándonos estrictamente en el Calendario Académico hoy
+            $materiasVigentes = DB::table('inscripciones as i')
+                ->join('cursos_materias as cm', 'i.IdCursoMateria', '=', 'cm.IdCursoMateria')
+                ->where('i.IdEstudiante', $studentCareer->IdEstudianteCarrera)
+                ->where('i.Estado', 1)
+                ->where('cm.Estado', 1)
+                ->where('cm.FechaInicio', '<=', $hoy)
+                ->where('cm.FechaFin', '>=', $hoy)
+                ->select('cm.FechaInicio', 'cm.FechaFin')
+                ->get();
+
+            $totalCursando = $materiasVigentes->count();
+
+            // 3. Cálculo dinámico del progreso del periodo (Semestre o Módulo Mensual)
+            if ($totalCursando > 0) {
+                $fechaInicio = Carbon::parse($materiasVigentes[0]->FechaInicio);
+                $fechaFin = Carbon::parse($materiasVigentes[0]->FechaFin);
+                $ahora = Carbon::now();
+
+                if ($ahora->greaterThanOrEqualTo($fechaFin)) {
+                    $progresoPorcentaje = 100;
+                } elseif ($ahora->lessThan($fechaInicio)) {
+                    $progresoPorcentaje = 0;
+                } else {
+                    $totalDias = $fechaInicio->diffInDays($fechaFin);
+                    $diasTranscurridos = $fechaInicio->diffInDays($ahora);
+                    $progresoPorcentaje = $totalDias > 0 ? round(($diasTranscurridos / $totalDias) * 100) : 0;
+                }
+            }
+
+            // Actividades Recientes: Últimas 5 inscripciones del alumno
             $recentEnrollments = DB::table('inscripciones')
                 ->join('cursos_materias', 'inscripciones.IdCursoMateria', '=', 'cursos_materias.IdCursoMateria')
                 ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
                 ->where('inscripciones.IdEstudiante', $studentCareer->IdEstudianteCarrera)
+                ->where('inscripciones.Estado', 1)
                 ->select(
                     'materias.Nombre as Materia',
                     'inscripciones.Fecha',
@@ -186,9 +233,19 @@ class DashboardService
                     'tipo' => 'inscripcion_estudiante',
                     'titulo' => 'Inscripción Exitosa',
                     'descripcion' => "Te inscribiste correctamente en la materia de {$e->Materia}." . ($e->Aprobado ? " (Estado: Aprobada)" : " (Estado: Cursando)"),
-                    'fecha' => $e->Fecha,
+                    'fecha' => Carbon::parse($e->Fecha)->diffForHumans(),
                 ])
                 ->all();
+        }
+
+        // Si no se encuentran actividades del estudiante, inicializamos un hito base de bienvenida
+        if (empty($recentEnrollments)) {
+            $recentEnrollments[] = [
+                'tipo' => 'sistema',
+                'titulo' => 'Portal Estudiantil Activo',
+                'descripcion' => 'Tu perfil de usuario está sincronizado y listo para el periodo actual.',
+                'fecha' => 'Reciente'
+            ];
         }
 
         return [
@@ -200,8 +257,9 @@ class DashboardService
             ],
             'actividades' => $recentEnrollments,
             'info_relevante' => [
-                'mensaje' => 'Revisa periódicamente el calendario y vigencia de tus materias matriculadas para organizar tu cursada lectiva.',
-                'ayuda' => 'Para inscribirte a nuevas materias disponibles, dirígete al panel lateral y selecciona la opción "Inscribirme a cursos".',
+                'mensaje' => "Estás cursando tu periodo académico actual bajo la modalidad: {$nombreModalidad}.",
+                'ayuda' => "Progreso transcurrido del periodo lectivo actual: {$progresoPorcentaje}%",
+                'progreso_porcentaje' => (int) $progresoPorcentaje // Llave inyectada para alimentar la barra en Dashboard.vue
             ],
         ];
     }

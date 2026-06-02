@@ -1,319 +1,541 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
+import {
+  User as UserIcon,
+  ShieldCheck,
+  Save,
+  KeyRound,
+  Mail,
+  Phone,
+  IdCard,
+  ArrowLeft,
+  Lock,
+  GraduationCap,
+  Layers,
+  Eye,
+  EyeOff,
+} from '@lucide/vue';
+import AppShell from './layout/AppShell.vue';
+import PageTransition from './layout/PageTransition.vue';
+import AppCard from './ui/AppCard.vue';
+import AppButton from './ui/AppButton.vue';
+import AppInput from './ui/AppInput.vue';
+import AppAlert from './ui/AppAlert.vue';
+import AppPageHeader from './ui/AppPageHeader.vue';
+import AppRoleBadge from './ui/AppRoleBadge.vue';
+import AppAvatar from './ui/AppAvatar.vue';
+import AppBadge from './ui/AppBadge.vue';
+import { toast } from '../lib/toast.js';
+
+const user = ref(null);
+const activeTab = ref('datos');
+const submitting = ref(false);
+const errorMsg = ref('');
+const successMsg = ref('');
+const showCurrent = ref(false);
+const showNew = ref(false);
+const showConfirm = ref(false);
+
+const form = ref({
+  IdUsuario: null,
+  IdRol: null,
+  Rol: null,
+  Nombre1: '',
+  Nombre2: '',
+  Apellido1: '',
+  Apellido2: '',
+  CI: '',
+  Telefono: '',
+  Correo: '',
+  CarreraNombre: '',
+  ModalidadNombre: '',
+});
+
+const passwordForm = ref({
+  password_actual: '',
+  contrasena: '',
+  contrasena_confirmation: '',
+});
+
+const roleVariant = computed(() => {
+  const map = { 1: 'admin', 2: 'teacher', 3: 'student' };
+  return map[Number(form.value.IdRol)] || 'default';
+});
+
+const roleLabel = computed(() => form.value.Rol?.Nombre || 'Cargando…');
+const fullName = computed(() => `${form.value.Nombre1} ${form.value.Apellido1}`.trim() || 'Usuario');
+const isStudent = computed(() => Number(form.value.IdRol) === 3);
+const tabs = [
+  { key: 'datos', label: 'Datos Personales', icon: UserIcon },
+  { key: 'seguridad', label: 'Seguridad', icon: ShieldCheck },
+];
+
+onMounted(async () => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    window.location.href = '/';
+    return;
+  }
+  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+  const stored = localStorage.getItem('auth_user');
+  if (stored) user.value = JSON.parse(stored);
+
+  await loadProfile();
+});
+
+const loadProfile = async () => {
+  try {
+    const { data } = await axios.get('/api/auth/perfil');
+    const u = data?.data?.user;
+    if (u) form.value = { ...form.value, ...u };
+  } catch (err) {
+    errorMsg.value = 'No se pudo recuperar la información del perfil.';
+  }
+};
+
+const clearAlerts = () => {
+  errorMsg.value = '';
+  successMsg.value = '';
+};
+
+const updateProfile = async () => {
+  clearAlerts();
+  submitting.value = true;
+  try {
+    const payload = {
+      Nombre1: form.value.Nombre1,
+      Nombre2: form.value.Nombre2,
+      Apellido1: form.value.Apellido1,
+      Apellido2: form.value.Apellido2,
+      CI: form.value.CI,
+      Telefono: form.value.Telefono,
+      Correo: form.value.Correo,
+    };
+    const { data } = await axios.put('/api/auth/perfil', payload);
+    const u = data?.data?.user;
+    if (u) {
+      form.value = { ...form.value, ...u };
+      localStorage.setItem('auth_user', JSON.stringify(u));
+    }
+    successMsg.value = data?.message || 'Perfil actualizado correctamente.';
+    toast.success(successMsg.value);
+  } catch (err) {
+    if (err?.response?.status === 422) {
+      const errors = err.response?.data?.errors;
+      errorMsg.value = errors
+        ? Object.values(errors).flat().join(' | ')
+        : err.response?.data?.message || 'Datos no válidos.';
+    } else {
+      errorMsg.value = err?.response?.data?.message || 'No se pudo actualizar el perfil.';
+    }
+    toast.error(errorMsg.value);
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const changePassword = async () => {
+  clearAlerts();
+  if (passwordForm.value.contrasena !== passwordForm.value.contrasena_confirmation) {
+    errorMsg.value = 'Las nuevas contraseñas no coinciden.';
+    toast.error(errorMsg.value);
+    return;
+  }
+  submitting.value = true;
+  try {
+    const { data } = await axios.put('/api/auth/contrasena', { ...passwordForm.value });
+    successMsg.value = data?.message || 'Contraseña cambiada correctamente.';
+    passwordForm.value = { password_actual: '', contrasena: '', contrasena_confirmation: '' };
+    toast.success(successMsg.value);
+  } catch (err) {
+    errorMsg.value = err?.response?.data?.message || 'No se pudo cambiar la contraseña. Verifica tu clave actual.';
+    toast.error(errorMsg.value);
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const handleLogout = async () => {
+  try {
+    if (localStorage.getItem('auth_token')) await axios.post('/api/auth/logout');
+  } catch {}
+  localStorage.clear();
+  delete axios.defaults.headers.common.Authorization;
+  window.location.href = '/';
+};
+</script>
+
 <template>
-  <section class="user-profile">
-    <header class="user-profile__header">
-      <div>
-        <p class="eyebrow">RF03</p>
-        <h1>Mi perfil</h1>
-        <p>Visualiza tu información académica, personal y administra la seguridad de tu cuenta.</p>
-      </div>
-      <a class="back-link" href="/index">Volver al panel</a>
-    </header>
-
-    <!-- Alertas Generales -->
-    <div v-if="message" class="alert" :class="`alert--${messageType}`">
-      {{ message }}
-      <button class="alert__close" @click="message = ''">&times;</button>
-    </div>
-
-    <div class="profile-card">
-      <!-- Pestañas de Navegación -->
-      <nav class="profile-tabs">
-        <button 
-          class="tab-link" 
-          :class="{ 'tab-link--active': activeTab === 'datos' }" 
-          @click="activeTab = 'datos'"
+  <AppShell v-if="user" :user="user" page-title="Mi perfil" @logout="handleLogout">
+    <PageTransition>
+      <div class="up">
+        <AppPageHeader
+          eyebrow="RF03 · Perfil"
+          title="Mi perfil"
+          description="Visualiza tu información académica, personal y administra la seguridad de tu cuenta."
         >
-          Datos Personales
-        </button>
-        <button 
-          class="tab-link" 
-          :class="{ 'tab-link--active': activeTab === 'seguridad' }" 
-          @click="activeTab = 'seguridad'"
-        >
-          Seguridad
-        </button>
-      </nav>
+          <template #actions>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/index'">
+              Volver al panel
+            </AppButton>
+          </template>
+        </AppPageHeader>
 
-      <!-- Pestaña 1: Datos Personales -->
-      <div v-if="activeTab === 'datos'" class="tab-content">
-        <form @submit.prevent="updateProfile" class="profile-form">
-          <div class="grid">
-            <label>
-              Nombre 1
-              <input v-model.trim="form.Nombre1" type="text" required />
-            </label>
+        <AppAlert v-if="successMsg" variant="success" :title="successMsg" dismissible @dismiss="successMsg = ''" />
+        <AppAlert v-if="errorMsg" variant="danger" :title="errorMsg" dismissible @dismiss="errorMsg = ''" />
 
-            <label>
-              Nombre 2
-              <input v-model.trim="form.Nombre2" type="text" />
-            </label>
-
-            <label>
-              Apellido 1
-              <input v-model.trim="form.Apellido1" type="text" required />
-            </label>
-
-            <label>
-              Apellido 2
-              <input v-model.trim="form.Apellido2" type="text" />
-            </label>
-
-            <label>
-              CI
-              <input v-model.trim="form.CI" type="text" required />
-            </label>
-
-            <label>
-              Teléfono
-              <input v-model.trim="form.Telefono" type="text" required />
-            </label>
-
-            <label>
-              Correo Electrónico
-              <input v-model.trim="form.Correo" type="email" required />
-            </label>
-
-            <label>
-              Rol de Acceso <span class="optional">(No editable)</span>
-              <input :value="form.Rol?.Nombre || 'Cargando...'" type="text" disabled class="input-disabled" />
-            </label>
-          </div>
-
-          <!-- Información Académica Solo Para Estudiantes -->
-          <div v-if="form.IdRol === 3" class="academic-panel">
-            <h3>Información Académica</h3>
-            <div class="academic-grid">
-              <div class="academic-item">
-                <span class="academic-item__label">Carrera</span>
-                <span class="academic-item__value">{{ form.CarreraNombre || 'No asignada' }}</span>
-              </div>
-              <div class="academic-item">
-                <span class="academic-item__label">Modalidad</span>
-                <span class="academic-item__value badge badge--modalidad">{{ form.ModalidadNombre || 'No asignada' }}</span>
+        <AppCard padding="none" class="up__card">
+          <div class="up__hero">
+            <AppAvatar :name="fullName" :variant="roleVariant" size="xl" />
+            <div class="up__hero-text">
+              <h2>{{ fullName }}</h2>
+              <div class="up__hero-meta">
+                <AppRoleBadge :role="roleVariant" :label="roleLabel" />
+                <span class="up__hero-mail"><Mail :size="14" /> {{ form.Correo }}</span>
               </div>
             </div>
           </div>
 
-          <div class="actions">
-            <button type="submit" :disabled="submitting">
-              {{ submitting ? 'Guardando...' : 'Guardar Cambios' }}
+          <nav class="up__tabs" role="tablist">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              role="tab"
+              :aria-selected="activeTab === tab.key"
+              :class="['up__tab', activeTab === tab.key && 'up__tab--active']"
+              @click="activeTab = tab.key"
+            >
+              <component :is="tab.icon" :size="16" />
+              {{ tab.label }}
             </button>
+          </nav>
+
+          <div v-if="activeTab === 'datos'" class="up__panel">
+            <form class="up__form" @submit.prevent="updateProfile">
+              <div class="up__grid">
+                <AppInput v-model="form.Nombre1" label="Nombre 1" :icon="UserIcon" required autocomplete="given-name" />
+                <AppInput v-model="form.Nombre2" label="Nombre 2" autocomplete="additional-name" />
+                <AppInput v-model="form.Apellido1" label="Apellido 1" required autocomplete="family-name" />
+                <AppInput v-model="form.Apellido2" label="Apellido 2" autocomplete="family-name" />
+                <AppInput v-model="form.CI" label="CI" :icon="IdCard" required />
+                <AppInput v-model="form.Telefono" label="Teléfono" :icon="Phone" required />
+                <AppInput v-model="form.Correo" label="Correo electrónico" type="email" :icon="Mail" required autocomplete="email" />
+                <AppInput :model-value="roleLabel" label="Rol de acceso" disabled hint="Asignado por el administrador, no editable." />
+              </div>
+
+              <section v-if="isStudent" class="up__academic">
+                <header class="up__academic-head">
+                  <h3>
+                    <GraduationCap :size="18" />
+                    Información académica
+                  </h3>
+                  <AppBadge variant="student" size="sm">Estudiante</AppBadge>
+                </header>
+                <div class="up__academic-grid">
+                  <div class="up__academic-item">
+                    <span class="up__academic-label"><Layers :size="14" /> Carrera</span>
+                    <span class="up__academic-value">{{ form.CarreraNombre || 'No asignada' }}</span>
+                  </div>
+                  <div class="up__academic-item">
+                    <span class="up__academic-label"><KeyRound :size="14" /> Modalidad</span>
+                    <span class="up__academic-value">{{ form.ModalidadNombre || 'No asignada' }}</span>
+                  </div>
+                </div>
+              </section>
+
+              <div class="up__actions">
+                <AppButton type="submit" variant="primary" :icon="Save" :loading="submitting">
+                  Guardar cambios
+                </AppButton>
+              </div>
+            </form>
           </div>
-        </form>
+
+          <div v-else class="up__panel">
+            <form class="up__form" @submit.prevent="changePassword">
+              <AppAlert variant="info" title="Recomendación">
+                Usa una contraseña de al menos 8 caracteres, combinando letras, números y símbolos.
+              </AppAlert>
+
+              <div class="up__security">
+                <div class="up__field">
+                  <AppInput
+                    v-model="passwordForm.password_actual"
+                    label="Contraseña actual"
+                    :type="showCurrent ? 'text' : 'password'"
+                    :icon="Lock"
+                    required
+                    placeholder="Escribe tu contraseña actual"
+                    autocomplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    class="up__toggle"
+                    :aria-label="showCurrent ? 'Ocultar contraseña actual' : 'Mostrar contraseña actual'"
+                    @click="showCurrent = !showCurrent"
+                  >
+                    <component :is="showCurrent ? EyeOff : Eye" :size="16" />
+                  </button>
+                </div>
+
+                <div class="up__field">
+                  <AppInput
+                    v-model="passwordForm.contrasena"
+                    label="Nueva contraseña"
+                    :type="showNew ? 'text' : 'password'"
+                    :icon="KeyRound"
+                    required
+                    minlength="6"
+                    hint="Mínimo 6 caracteres"
+                    placeholder="Define tu nueva contraseña"
+                    autocomplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    class="up__toggle"
+                    :aria-label="showNew ? 'Ocultar nueva contraseña' : 'Mostrar nueva contraseña'"
+                    @click="showNew = !showNew"
+                  >
+                    <component :is="showNew ? EyeOff : Eye" :size="16" />
+                  </button>
+                </div>
+
+                <div class="up__field">
+                  <AppInput
+                    v-model="passwordForm.contrasena_confirmation"
+                    label="Confirmar nueva contraseña"
+                    :type="showConfirm ? 'text' : 'password'"
+                    :icon="KeyRound"
+                    required
+                    placeholder="Repite la nueva contraseña"
+                    autocomplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    class="up__toggle"
+                    :aria-label="showConfirm ? 'Ocultar confirmación' : 'Mostrar confirmación'"
+                    @click="showConfirm = !showConfirm"
+                  >
+                    <component :is="showConfirm ? EyeOff : Eye" :size="16" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="up__actions">
+                <AppButton type="submit" variant="primary" :icon="KeyRound" :loading="submitting">
+                  Cambiar contraseña
+                </AppButton>
+              </div>
+            </form>
+          </div>
+        </AppCard>
       </div>
-
-      <!-- Pestaña 2: Seguridad / Cambiar Contraseña -->
-      <div v-if="activeTab === 'seguridad'" class="tab-content">
-        <form @submit.prevent="changePassword" class="profile-form">
-          <div class="grid grid--single">
-            <label>
-              Contraseña Actual
-              <input v-model="passwordForm.password_actual" type="password" required placeholder="Escribe tu contraseña actual para confirmar" />
-            </label>
-
-            <label>
-              Nueva Contraseña
-              <input v-model="passwordForm.contrasena" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" />
-            </label>
-
-            <label>
-              Confirmar Nueva Contraseña
-              <input v-model="passwordForm.contrasena_confirmation" type="password" required placeholder="Repite la nueva contraseña" />
-            </label>
-          </div>
-
-          <div class="actions">
-            <button type="submit" class="btn-save" :disabled="submitting">
-              {{ submitting ? 'Actualizando...' : 'Cambiar Contraseña' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </section>
+    </PageTransition>
+  </AppShell>
 </template>
 
-<script>
-import axios from 'axios';
-
-export default {
-  name: 'UserProfile',
-  data() {
-    return {
-      activeTab: 'datos',
-      submitting: false,
-      message: '',
-      messageType: 'error',
-      form: {
-        IdUsuario: null,
-        IdRol: null,
-        Rol: null,
-        Nombre1: '',
-        Nombre2: '',
-        Apellido1: '',
-        Apellido2: '',
-        CI: '',
-        Telefono: '',
-        Correo: '',
-        CarreraNombre: '',
-        ModalidadNombre: '',
-      },
-      passwordForm: {
-        password_actual: '',
-        contrasena: '',
-        contrasena_confirmation: '',
-      }
-    };
-  },
-  mounted() {
-    this.loadProfile();
-  },
-  methods: {
-    async loadProfile() {
-      try {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-        } else {
-          window.location.href = '/';
-          return;
-        }
-
-        const { data } = await axios.get('/api/auth/perfil');
-        const user = data?.data?.user;
-        if (user) {
-          this.form = { ...user };
-        }
-      } catch (error) {
-        this.setMessage('No se pudo recuperar la información del perfil.', 'error');
-      }
-    },
-    async updateProfile() {
-      this.submitting = true;
-      this.message = '';
-
-      try {
-        const payload = {
-          Nombre1: this.form.Nombre1,
-          Nombre2: this.form.Nombre2,
-          Apellido1: this.form.Apellido1,
-          Apellido2: this.form.Apellido2,
-          CI: this.form.CI,
-          Telefono: this.form.Telefono,
-          Correo: this.form.Correo,
-        };
-
-        const { data } = await axios.put('/api/auth/perfil', payload);
-        const user = data?.data?.user;
-        if (user) {
-          this.form = { ...user };
-          localStorage.setItem('auth_user', JSON.stringify(user));
-        }
-        this.setMessage('Perfil actualizado correctamente.', 'success');
-      } catch (error) {
-        if (error?.response?.status === 422) {
-          const errors = error.response?.data?.errors;
-          if (errors && typeof errors === 'object') {
-            const messages = Object.values(errors).flat().join(' | ');
-            this.setMessage(messages || 'Los datos de entrada no son válidos.', 'error');
-          } else {
-            const responseMsg = error.response?.data?.message;
-            this.setMessage(responseMsg || 'Los datos de entrada no son válidos.', 'error');
-          }
-        } else {
-          const responseMsg = error?.response?.data?.message;
-          this.setMessage(responseMsg || 'Ocurrió un error al actualizar el perfil.', 'error');
-        }
-      } finally {
-        this.submitting = false;
-      }
-    },
-    async changePassword() {
-      if (this.passwordForm.contrasena !== this.passwordForm.contrasena_confirmation) {
-        this.setMessage('Las nuevas contraseñas no coinciden.', 'error');
-        return;
-      }
-
-      this.submitting = true;
-      this.message = '';
-
-      try {
-        const { data } = await axios.put('/api/auth/contrasena', this.passwordForm);
-        this.setMessage(data?.message || 'Contraseña cambiada correctamente.', 'success');
-        this.passwordForm = {
-          password_actual: '',
-          contrasena: '',
-          contrasena_confirmation: '',
-        };
-      } catch (error) {
-        const responseMsg = error?.response?.data?.message;
-        this.setMessage(responseMsg || 'No se pudo cambiar la contraseña. Verifica tu clave actual.', 'error');
-      } finally {
-        this.submitting = false;
-      }
-    },
-    setMessage(message, type = 'error') {
-      this.message = message;
-      this.messageType = type;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }
-};
-</script>
-
 <style scoped>
-.user-profile { min-height: 100vh; padding: 32px; background: linear-gradient(180deg, #07111f 0%, #101b2b 100%); color: #eef2ff; }
-.user-profile__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 32px; }
-.eyebrow { margin: 0 0 8px; color: #fbbf24; text-transform: uppercase; letter-spacing: .18em; font-size: .75rem; }
-h1 { margin: 0; font-size: 2rem; }
-p { margin: 8px 0 0; color: #cbd5e1; }
-.back-link, button { border-radius: 999px; padding: 12px 24px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.back-link { background: transparent; border: 1px solid rgba(148, 163, 184, .22); color: #cbd5e1; }
-button { background: #fbbf24; color: #0f172a; }
+.up {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
 
-.alert { position: relative; margin: 20px 0; padding: 16px 40px 16px 18px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; }
-.alert--success { background: rgba(16, 185, 129, .16); color: #d1fae5; border: 1px solid rgba(16, 185, 129, .3); }
-.alert--error { background: rgba(239, 68, 68, .16); color: #fecaca; border: 1px solid rgba(239, 68, 68, .3); }
-.alert__close { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.5rem; color: inherit; cursor: pointer; }
+.up__card {
+  overflow: hidden;
+}
 
-/* Tarjeta Perfil */
-.profile-card { background: rgba(15, 23, 42, .86); border: 1px solid rgba(148, 163, 184, .18); border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); overflow: hidden; }
+.up__hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 26px 28px;
+  background:
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(28, 39, 66, 0.5) 0%, rgba(19, 28, 48, 0.6) 100%);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
 
-/* Tabs */
-.profile-tabs { display: flex; background: rgba(30, 41, 59, .5); border-bottom: 1px solid rgba(148, 163, 184, .12); }
-.tab-link { background: transparent; color: #94a3b8; border-radius: 0; padding: 16px 24px; font-weight: 600; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
-.tab-link:hover { color: #f8fafc; background: rgba(255, 255, 255, .02); }
-.tab-link--active { color: #fbbf24; border-bottom-color: #fbbf24; font-weight: 700; background: rgba(15, 23, 42, .4); }
+.up__hero-text h2 {
+  margin: 0 0 6px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
 
-/* Contenido de Pestañas */
-.tab-content { padding: 24px; }
-.profile-form .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.profile-form .grid--single { grid-template-columns: 1fr; max-width: 500px; }
-.profile-form label { display: flex; flex-direction: column; gap: 8px; font-weight: 600; color: #e2e8f0; font-size: 0.95rem; }
-.profile-form input { border-radius: 14px; border: 1px solid rgba(148, 163, 184, .22); background: rgba(30, 41, 59, .82); color: #f8fafc; padding: 14px 16px; font-size: 1rem; outline: none; }
-.profile-form input:focus { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251, 191, 36, .18); }
-.optional { color: #64748b; font-size: 0.78rem; font-weight: 400; }
-.input-disabled { background: rgba(30, 41, 59, .4) !important; color: #94a3b8 !important; border-color: rgba(148, 163, 184, .08) !important; cursor: not-allowed; }
+.up__hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
-/* Panel Académico */
-.academic-panel { margin-top: 32px; background: rgba(30, 41, 59, .4); border: 1px solid rgba(148, 163, 184, .12); border-radius: 20px; padding: 20px; }
-.academic-panel h3 { margin: 0 0 16px; font-size: 1.15rem; color: #fbbf24; font-weight: 700; border-bottom: 1px solid rgba(148, 163, 184, .12); padding-bottom: 8px; }
-.academic-grid { display: flex; gap: 40px; flex-wrap: wrap; }
-.academic-item { display: flex; flex-direction: column; gap: 6px; }
-.academic-item__label { color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.academic-item__value { color: #f8fafc; font-size: 1.05rem; font-weight: 700; }
+.up__hero-mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
 
-.badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-.badge--modalidad { background: rgba(139, 92, 246, .16); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, .3); align-self: flex-start; }
+.up__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: rgba(28, 39, 66, 0.25);
+  padding: 0 8px;
+  gap: 4px;
+  overflow-x: auto;
+}
 
-.actions { display: flex; justify-content: flex-end; margin-top: 24px; }
-.btn-save { background: #fbbf24; color: #0f172a; }
-button:disabled { opacity: 0.7; cursor: not-allowed; }
+.up__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  min-height: 48px;
+}
 
-@media (max-width: 900px) {
-  .user-profile__header { flex-direction: column; align-items: stretch; gap: 20px; }
-  .profile-form .grid { grid-template-columns: 1fr; }
-  .profile-form .grid--single { max-width: 100%; }
-  .academic-grid { flex-direction: column; gap: 16px; }
+.up__tab:hover {
+  color: var(--color-text-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.up__tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.up__panel {
+  padding: 24px 28px 28px;
+}
+
+.up__form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.up__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.up__security {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.up__field {
+  position: relative;
+}
+
+.up__toggle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.up__toggle:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-3);
+}
+
+.up__academic {
+  background: rgba(28, 39, 66, 0.4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+.up__academic-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.up__academic-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.up__academic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.up__academic-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.up__academic-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.up__academic-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.up__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+@media (max-width: 768px) {
+  .up__hero { flex-direction: column; align-items: flex-start; text-align: left; padding: 22px; }
+  .up__grid { grid-template-columns: 1fr; }
+  .up__academic-grid { grid-template-columns: 1fr; }
+  .up__panel { padding: 18px; }
+  .up__security { max-width: 100%; }
 }
 </style>

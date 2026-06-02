@@ -1,830 +1,538 @@
-<template>
-  <section class="dashboard">
-    <header class="dashboard__header">
-      <div>
-        <p class="eyebrow">Panel principal</p>
-        <h1>Bienvenido{{ user?.Nombre1 ? `, ${user.Nombre1}` : '' }}</h1>
-        <p class="lead">
-          {{ roleLabel }} | {{ user?.Rol?.Descripcion || 'Acceso al sistema escolar' }}
-        </p>
-      </div>
-      <button class="logout" @click="logout" :disabled="loading">
-        {{ loading ? 'Saliendo...' : 'Cerrar sesión' }}
-      </button>
-    </header>
-
-    <div class="role-banner" :class="roleClass">
-      <p class="role-banner__title">{{ roleLabel }}</p>
-      <p class="role-banner__text">{{ roleWelcome }}</p>
-    </div>
-
-    <!-- Acciones exclusivas Admin -->
-    <div class="role-actions" v-if="user?.IdRol === 1">
-      <a class="role-link" href="/usuarios/create">Registrar usuarios</a>
-      <a class="role-link" href="/usuarios">Gestionar usuarios</a>
-      <a class="role-link" href="/cursos">Gestionar cursos</a>
-    </div>
-
-    <!-- Acciones generales -->
-    <div class="role-actions">
-      <a class="role-link" href="/perfil">Mi perfil</a>
-      <a class="role-link" href="/dashboard">Dashboard</a>
-      <a class="role-link" href="/reportes">Reportes</a>
-      <a v-if="user?.IdRol !== 2" class="role-link" href="/cursos/visualizacion">Ver cursos</a>
-      
-      <!-- Botón de Notificaciones con contador -->
-      <button 
-        class="role-link notification-btn" 
-        :class="{ 'notification-btn--active': showNotificaciones }"
-        @click="toggleNotificationPanel"
-        style="cursor: pointer; border: 0;"
-      >
-        🔔 Notificaciones 
-        <span v-if="unreadCount > 0" class="badge-count">{{ unreadCount }}</span>
-      </button>
-    </div>
-
-    <div class="role-actions" v-if="user?.IdRol === 3">
-      <a class="role-link" href="/inscripciones">Inscribirme a cursos</a>
-    </div>
-
-    <div class="role-actions" v-if="user?.IdRol === 2">
-      <a class="role-link" href="/docente/cursos">Mis cursos</a>
-      <a class="role-link" href="/docente/notas">Gestionar notas</a>
-    </div>
-
-    <!-- PANEL DE NOTIFICACIONES (Sección Acordeón Desplegable) -->
-    <transition name="fade">
-      <div v-if="showNotificaciones" class="notifications-section">
-        <div class="noti-header">
-          <h3>Bandeja de Notificaciones ({{ notifications.length }})</h3>
-          <button class="close-noti-btn" @click="showNotificaciones = false">✕ Cerrar</button>
-        </div>
-
-        <!-- Creador de notificaciones (Solo para Admin) -->
-        <div v-if="user?.IdRol === 1" class="admin-noti-composer">
-          <button class="toggle-composer-btn" @click="showComposer = !showComposer">
-            {{ showComposer ? '✕ Cancelar Envío' : '➕ Redactar Nueva Notificación' }}
-          </button>
-          
-          <transition name="slide">
-            <form v-if="showComposer" @submit.prevent="sendNotification" class="composer-form">
-              <h4>Enviar Notificación Directa</h4>
-              <div class="form-group">
-                <label>Usuario Destino:</label>
-                <select v-model="composerData.IdUsuario" required>
-                  <option value="" disabled>Seleccione un usuario...</option>
-                  <option v-for="u in usuariosList" :key="u.IdUsuario" :value="u.IdUsuario">
-                    [{{ getRoleName(u.IdRol) }}] {{ u.Nombre1 }} {{ u.Apellido1 }} ({{ u.Correo }})
-                  </option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Título:</label>
-                <input type="text" v-model="composerData.Titulo" placeholder="Ej. Recordatorio de Examen" required />
-              </div>
-              <div class="form-group">
-                <label>Mensaje / Contenido:</label>
-                <textarea v-model="composerData.Contenido" placeholder="Escribe el mensaje..." required></textarea>
-              </div>
-              <button type="submit" class="send-btn" :disabled="sendingNoti">
-                {{ sendingNoti ? 'Enviando...' : 'Enviar Notificación' }}
-              </button>
-            </form>
-          </transition>
-        </div>
-
-        <div v-if="loadingNoti" class="noti-loading">
-          <div class="mini-spinner"></div>
-          <p>Cargando notificaciones...</p>
-        </div>
-
-        <div v-else>
-          <div v-if="notifications.length === 0" class="noti-empty">
-            <p>No tienes notificaciones en este momento.</p>
-          </div>
-
-          <!-- Acordeón interactivo -->
-          <ul v-else class="noti-accordion">
-            <li 
-              v-for="noti in notifications" 
-              :key="noti.IdNotificacion" 
-              class="noti-item"
-              :class="{ 'noti-item--unread': noti.Estado }"
-            >
-              <!-- Cabecera de Notificación (Click para expandir) -->
-              <div class="noti-item__header" @click="expandNotification(noti)">
-                <div class="noti-item__title-box">
-                  <span class="noti-status-dot" v-if="noti.Estado"></span>
-                  <span class="noti-item__title">{{ noti.Titulo }}</span>
-                </div>
-                <div class="noti-item__meta">
-                  <span class="noti-item__date">{{ formatDateTime(noti.FechaEnvio) }}</span>
-                  <span class="noti-chevron">{{ expandedNotis[noti.IdNotificacion] ? '▲' : '▼' }}</span>
-                </div>
-              </div>
-
-              <!-- Contenido de Notificación (Desplegable) -->
-              <transition name="expand">
-                <div v-if="expandedNotis[noti.IdNotificacion]" class="noti-item__body">
-                  <p class="noti-item__content">{{ noti.Contenido }}</p>
-                  <div class="noti-item__actions">
-                    <button class="noti-read-toggle-btn" @click.stop="toggleRead(noti)">
-                      {{ noti.Estado ? 'Marcar como leída' : 'Marcar como no leída' }}
-                    </button>
-                    <button class="noti-delete-btn" @click.stop="deleteNotification(noti.IdNotificacion)">
-                      🗑️ Eliminar
-                    </button>
-                  </div>
-                </div>
-              </transition>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </transition>
-
-    <div class="cards" v-if="!showNotificaciones">
-      <article v-for="card in visibleCards" :key="card.title" class="card">
-        <h2>{{ card.title }}</h2>
-        <p>{{ card.description }}</p>
-      </article>
-    </div>
-  </section>
-</template>
-
-<script>
+<script setup>
 import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
+import {
+  Users,
+  Shield,
+  BarChart3,
+  Settings,
+  BookOpen,
+  ClipboardList,
+  Award,
+  Calendar,
+  GraduationCap,
+  ArrowRight,
+  Sparkles,
+} from '@lucide/vue';
+import AppShell from './layout/AppShell.vue';
+import PageTransition from './layout/PageTransition.vue';
+import AppCard from './ui/AppCard.vue';
+import AppRoleBadge from './ui/AppRoleBadge.vue';
+import AppBadge from './ui/AppBadge.vue';
+import AppEmptyState from './ui/AppEmptyState.vue';
+import { toast } from '../lib/toast.js';
 
-export default {
-  name: 'IndexPage',
-  setup() {
-    const user = ref(null);
-    const loading = ref(false);
+const user = ref(null);
+const notifications = ref([]);
+const showNotifications = ref(false);
 
-    // Estados de Notificación
-    const showNotificaciones = ref(false);
-    const notifications = ref([]);
-    const expandedNotis = ref({});
-    const loadingNoti = ref(false);
-    
-    // Estados de Redactor Admin
-    const showComposer = ref(false);
-    const usuariosList = ref([]);
-    const sendingNoti = ref(false);
-    const composerData = ref({
-      IdUsuario: '',
-      Titulo: '',
-      Contenido: ''
-    });
+const unreadCount = computed(() => notifications.value.filter((n) => n.Estado).length);
 
-    const roleMap = {
-      1: {
-        label: 'Administrador',
-        welcome: 'Tienes acceso completo al sistema y sus módulos de gestión.',
-        className: 'role-banner--admin',
-        cards: [
-          { title: 'Usuarios', description: 'Crear, editar, activar y desactivar cuentas.' },
-          { title: 'Roles y permisos', description: 'Administrar accesos por perfil de usuario.' },
-          { title: 'Reportes', description: 'Visualizar estadísticas y control general.' },
-          { title: 'Configuración', description: 'Ajustes globales del sistema.' },
-        ],
-      },
-      2: {
-        label: 'Docente',
-        welcome: 'Gestiona tus cursos, materias y calificaciones asignadas.',
-        className: 'role-banner--teacher',
-        cards: [
-          { title: 'Mis cursos', description: 'Ver las clases asignadas en el periodo actual.' },
-          { title: 'Registro de notas', description: 'Cargar y actualizar calificaciones.' },
-          { title: 'Estudiantes', description: 'Consultar listas e información de inscritos.' },
-          { title: 'Notificaciones', description: 'Revisar avisos académicos y del sistema.' },
-        ],
-      },
-      3: {
-        label: 'Estudiante',
-        welcome: 'Consulta tus materias, avances y notificaciones personales.',
-        className: 'role-banner--student',
-        cards: [
-          { title: 'Mis inscripciones', description: 'Ver materias y cursos en los que estás inscrito.' },
-          { title: 'Mis notas', description: 'Consultar tus calificaciones registradas.' },
-          { title: 'Horario', description: 'Revisar tus horarios y turnos.' },
-          { title: 'Notificaciones', description: 'Leer mensajes importantes del sistema.' },
-        ],
-      },
-    };
-
-    const currentRole = computed(() => roleMap[user.value?.IdRol] ?? {
-      label: 'Usuario',
-      welcome: 'Acceso general al sistema.',
-      className: 'role-banner--default',
-      cards: [
-        { title: 'Panel', description: 'Contenido disponible según permisos.' },
-      ],
-    });
-
-    const roleLabel = computed(() => currentRole.value.label);
-    const roleWelcome = computed(() => currentRole.value.welcome);
-    const roleClass = computed(() => currentRole.value.className);
-    const visibleCards = computed(() => currentRole.value.cards);
-    
-    // Contador de notificaciones no leídas
-    const unreadCount = computed(() => notifications.value.filter(n => n.Estado).length);
-
-    onMounted(async () => {
-      const token = localStorage.getItem('auth_token');
-
-      if (!token) {
-        window.location.href = '/';
-        return;
-      }
-
-      axios.defaults.headers.common.Authorization = `Bearer ${token}`;
-
-      try {
-        const storedUser = localStorage.getItem('auth_user');
-        if (storedUser) {
-          user.value = JSON.parse(storedUser);
-        }
-
-        const response = await axios.get('/api/auth/perfil');
-        user.value = response.data.data.user;
-        localStorage.setItem('auth_user', JSON.stringify(user.value));
-
-        // Cargar notificaciones
-        await fetchNotifications();
-
-        // Cargar usuarios si es administrador
-        if (user.value.IdRol === 1) {
-          await fetchUsuarios();
-        }
-      } catch (error) {
-        console.error(error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        delete axios.defaults.headers.common.Authorization;
-        window.location.href = '/';
-      }
-    });
-
-    // Métodos para Notificaciones
-    const fetchNotifications = async () => {
-      loadingNoti.value = true;
-      try {
-        const { data } = await axios.get('/api/notificaciones');
-        notifications.value = data.data || [];
-      } catch (error) {
-        console.error('Error cargando notificaciones:', error);
-      } finally {
-        loadingNoti.value = false;
-      }
-    };
-
-    const fetchUsuarios = async () => {
-      try {
-        const { data } = await axios.get('/api/usuarios');
-        usuariosList.value = data.data || [];
-      } catch (error) {
-        console.error('Error cargando usuarios:', error);
-      }
-    };
-
-    const toggleNotificationPanel = () => {
-      showNotificaciones.value = !showNotificaciones.value;
-      if (showNotificaciones.value) {
-        fetchNotifications();
-      }
-    };
-
-    const expandNotification = async (noti) => {
-      const id = noti.IdNotificacion;
-      expandedNotis.value[id] = !expandedNotis.value[id];
-
-      // Al expandir una notificación no leída, la marcamos automáticamente como leída
-      if (expandedNotis.value[id] && noti.Estado) {
-        await toggleRead(noti);
-      }
-    };
-
-    const toggleRead = async (noti) => {
-      try {
-        noti.Estado = !noti.Estado;
-        await axios.patch(`/api/notificaciones/${noti.IdNotificacion}/toggle`);
-      } catch (error) {
-        console.error('Error al alternar lectura:', error);
-        noti.Estado = !noti.Estado; // revertir
-      }
-    };
-
-    const deleteNotification = async (id) => {
-      try {
-        notifications.value = notifications.value.filter(n => n.IdNotificacion !== id);
-        await axios.delete(`/api/notificaciones/${id}`);
-      } catch (error) {
-        console.error('Error al eliminar notificación:', error);
-        fetchNotifications();
-      }
-    };
-
-    const sendNotification = async () => {
-      sendingNoti.value = true;
-      try {
-        await axios.post('/api/notificaciones', composerData.value);
-        composerData.value.Titulo = '';
-        composerData.value.Contenido = '';
-        showComposer.value = false;
-        alert('¡Notificación enviada con éxito!');
-        await fetchNotifications();
-      } catch (error) {
-        console.error('Error enviando notificación:', error);
-        alert('Error al enviar. Inténtalo de nuevo.');
-      } finally {
-        sendingNoti.value = false;
-      }
-    };
-
-    const getRoleName = (idRol) => {
-      const roles = { 1: 'Admin', 2: 'Docente', 3: 'Estudiante' };
-      return roles[idRol] || 'Usuario';
-    };
-
-    const formatDateTime = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'short', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    };
-
-    const logout = async () => {
-      try {
-        loading.value = true;
-
-        if (localStorage.getItem('auth_token')) {
-          await axios.post('/api/auth/logout');
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        delete axios.defaults.headers.common.Authorization;
-        window.location.href = '/';
-        loading.value = false;
-      }
-    };
-
-    return {
-      user,
-      loading,
-      roleLabel,
-      roleWelcome,
-      roleClass,
-      visibleCards,
-      logout,
-      
-      // Retornos de notificaciones
-      showNotificaciones,
-      notifications,
-      expandedNotis,
-      loadingNoti,
-      unreadCount,
-      showComposer,
-      usuariosList,
-      sendingNoti,
-      composerData,
-      toggleNotificationPanel,
-      expandNotification,
-      toggleRead,
-      deleteNotification,
-      sendNotification,
-      getRoleName,
-      formatDateTime
-    };
+const roleMap = {
+  1: {
+    label: 'Administrador',
+    className: 'admin',
+    welcome: 'Tienes acceso completo al sistema y sus módulos de gestión.',
+    gradient: 'gradient-role-admin',
   },
+  2: {
+    label: 'Docente',
+    className: 'teacher',
+    welcome: 'Gestiona tus cursos, materias y calificaciones asignadas.',
+    gradient: 'gradient-role-teacher',
+  },
+  3: {
+    label: 'Estudiante',
+    className: 'student',
+    welcome: 'Consulta tus materias, avances y notificaciones personales.',
+    gradient: 'gradient-role-student',
+  },
+};
+
+const currentRole = computed(() => roleMap[user.value?.IdRol] || {
+  label: 'Usuario',
+  className: 'default',
+  welcome: 'Acceso general al sistema.',
+  gradient: 'gradient-primary',
+});
+
+const quickActions = computed(() => {
+  const rol = user.value?.IdRol;
+  const items = [];
+
+  if (rol === 1) {
+    items.push({ to: '/usuarios', label: 'Gestionar usuarios', icon: Users, variant: 'primary' });
+    items.push({ to: '/cursos', label: 'Gestionar cursos', icon: GraduationCap, variant: 'primary' });
+    items.push({ to: '/reportes', label: 'Ver reportes', icon: BarChart3, variant: 'primary' });
+  } else if (rol === 2) {
+    items.push({ to: '/docente/cursos', label: 'Mis cursos', icon: BookOpen, variant: 'primary' });
+    items.push({ to: '/docente/notas', label: 'Gestionar notas', icon: ClipboardList, variant: 'primary' });
+  } else if (rol === 3) {
+    items.push({ to: '/cursos/visualizacion', label: 'Mis cursos', icon: BookOpen, variant: 'primary' });
+    items.push({ to: '/perfil', label: 'Mi perfil', icon: Award, variant: 'primary' });
+  }
+
+  return items;
+});
+
+const featureCards = computed(() => {
+  const rol = user.value?.IdRol;
+  if (rol === 1) {
+    return [
+      { title: 'Usuarios', description: 'Crear, editar, activar y desactivar cuentas.', icon: Users, color: 'primary' },
+      { title: 'Reportes', description: 'Visualizar estadísticas y control general.', icon: BarChart3, color: 'info' },
+      { title: 'Roles y permisos', description: 'Administrar accesos por perfil de usuario.', icon: Shield, color: 'admin' },
+      { title: 'Configuración', description: 'Ajustes globales del sistema.', icon: Settings, color: 'neutral' },
+    ];
+  }
+  if (rol === 2) {
+    return [
+      { title: 'Mis cursos', description: 'Ver las clases asignadas en el periodo actual.', icon: BookOpen, color: 'teacher' },
+      { title: 'Registro de notas', description: 'Cargar y actualizar calificaciones.', icon: ClipboardList, color: 'teacher' },
+      { title: 'Estudiantes', description: 'Consultar listas e información de inscritos.', icon: Users, color: 'teacher' },
+      { title: 'Horario', description: 'Revisar tus horarios y turnos.', icon: Calendar, color: 'info' },
+    ];
+  }
+  if (rol === 3) {
+    return [
+      { title: 'Mis inscripciones', description: 'Ver materias y cursos en los que estás inscrito.', icon: BookOpen, color: 'student' },
+      { title: 'Mis notas', description: 'Consultar tus calificaciones registradas.', icon: Award, color: 'student' },
+      { title: 'Horario', description: 'Revisar tus horarios y turnos.', icon: Calendar, color: 'student' },
+      { title: 'Notificaciones', description: 'Leer mensajes importantes del sistema.', icon: Sparkles, color: 'info' },
+    ];
+  }
+  return [];
+});
+
+onMounted(async () => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    window.location.href = '/';
+    return;
+  }
+  axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+  try {
+    const stored = localStorage.getItem('auth_user');
+    if (stored) user.value = JSON.parse(stored);
+
+    const { data } = await axios.get('/api/auth/perfil');
+    user.value = data.data.user;
+    localStorage.setItem('auth_user', JSON.stringify(user.value));
+
+    await fetchNotifications();
+  } catch (err) {
+    console.error(err);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    delete axios.defaults.headers.common.Authorization;
+    window.location.href = '/';
+  }
+});
+
+const fetchNotifications = async () => {
+  try {
+    const { data } = await axios.get('/api/notificaciones');
+    notifications.value = data.data || [];
+  } catch (err) {
+    console.error('Error cargando notificaciones:', err);
+  }
+};
+
+const handleLogout = async () => {
+  try {
+    if (localStorage.getItem('auth_token')) {
+      await axios.post('/api/auth/logout');
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    delete axios.defaults.headers.common.Authorization;
+    window.location.href = '/';
+  }
+};
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value;
+};
+
+const markAllAsRead = async () => {
+  try {
+    await Promise.all(
+      notifications.value
+        .filter((n) => n.Estado)
+        .map((n) => axios.patch(`/api/notificaciones/${n.IdNotificacion}/toggle`))
+    );
+    notifications.value.forEach((n) => (n.Estado = false));
+    toast.success('Notificaciones marcadas como leídas');
+  } catch (err) {
+    toast.error('No se pudieron actualizar las notificaciones');
+  }
+};
+
+const formatDateTime = (d) => {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 </script>
 
+<template>
+  <AppShell
+    v-if="user"
+    :user="user"
+    :unread-notifications="unreadCount"
+    @logout="handleLogout"
+    @open-notifications="toggleNotifications"
+  >
+    <PageTransition>
+      <div class="index">
+        <!-- Hero / Welcome banner -->
+        <section :class="['index__hero', currentRole.gradient]">
+          <div class="index__hero-content">
+            <div class="index__hero-meta">
+              <AppRoleBadge :role="currentRole.className" :label="currentRole.label" />
+              <span class="index__hero-greeting">
+                <Sparkles :size="14" />
+                {{ new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) }}
+              </span>
+            </div>
+            <h1 class="index__hero-title">
+              ¡Hola, {{ user.Nombre1 }}!
+            </h1>
+            <p class="index__hero-sub">{{ currentRole.welcome }}</p>
+
+            <div class="index__hero-actions">
+              <a v-for="action in quickActions" :key="action.to" :href="action.to" class="index__hero-btn">
+                <component :is="action.icon" :size="18" />
+                {{ action.label }}
+                <ArrowRight :size="16" />
+              </a>
+            </div>
+          </div>
+          <div class="index__hero-glow"></div>
+        </section>
+
+        <!-- Notificaciones inline -->
+        <section v-if="showNotifications" class="index__notif">
+          <div class="index__notif-head">
+            <h3>Bandeja de Notificaciones</h3>
+            <div class="index__notif-actions">
+              <button v-if="unreadCount > 0" class="index__notif-btn" @click="markAllAsRead">
+                Marcar todas como leídas
+              </button>
+              <button class="index__notif-btn index__notif-btn--ghost" @click="showNotifications = false">
+                Cerrar
+              </button>
+            </div>
+          </div>
+
+          <div v-if="notifications.length === 0">
+            <AppEmptyState title="Sin notificaciones" description="No tienes notificaciones en este momento." />
+          </div>
+
+          <ul v-else class="index__notif-list">
+            <li
+              v-for="noti in notifications"
+              :key="noti.IdNotificacion"
+              :class="['index__notif-item', noti.Estado && 'index__notif-item--unread']"
+            >
+              <div class="index__notif-body">
+                <div class="index__notif-top">
+                  <strong>{{ noti.Titulo }}</strong>
+                  <span class="index__notif-date">{{ formatDateTime(noti.FechaEnvio) }}</span>
+                </div>
+                <p>{{ noti.Contenido }}</p>
+              </div>
+              <AppBadge v-if="noti.Estado" variant="primary" size="sm">Nueva</AppBadge>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Feature cards -->
+        <section v-if="featureCards.length" class="index__grid">
+          <AppCard
+            v-for="(card, i) in featureCards"
+            :key="card.title"
+            interactive
+            class="index__feature-card"
+            :style="{ animationDelay: `${i * 50}ms` }"
+          >
+            <div :class="['index__feature-icon', `index__feature-icon--${card.color}`]">
+              <component :is="card.icon" :size="22" :stroke-width="2" />
+            </div>
+            <h3>{{ card.title }}</h3>
+            <p>{{ card.description }}</p>
+          </AppCard>
+        </section>
+      </div>
+    </PageTransition>
+  </AppShell>
+</template>
+
 <style scoped>
-.dashboard {
-  display: grid;
-  gap: 1.5rem;
-  color: #e5e7eb;
-}
-
-.dashboard__header {
+.index {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.eyebrow {
-  margin: 0 0 0.35rem;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  font-size: 0.72rem;
-  color: #fbbf24;
+.index__hero {
+  position: relative;
+  padding: 36px 40px;
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  color: white;
+  box-shadow: var(--shadow-lg);
 }
 
-h1 {
-  margin: 0;
-  font-size: 1.9rem;
-}
-
-.lead {
-  margin: 0.5rem 0 0;
-  color: #cbd5e1;
-}
-
-.logout {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.8rem 1.1rem;
-  background: linear-gradient(135deg, #f97316, #fbbf24);
-  color: #111827;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.role-banner {
-  padding: 1rem 1.1rem;
-  border-radius: 18px;
-  color: #111827;
-}
-
-.role-banner--admin {
-  background: linear-gradient(135deg, #f59e0b, #ef4444);
-}
-
-.role-banner--teacher {
-  background: linear-gradient(135deg, #38bdf8, #2563eb);
-}
-
-.role-banner--student {
-  background: linear-gradient(135deg, #34d399, #10b981);
-}
-
-.role-banner--default {
-  background: linear-gradient(135deg, #fbbf24, #f97316);
-}
-
-.role-banner__title {
-  margin: 0 0 0.35rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.role-banner__text {
-  margin: 0;
-  font-weight: 600;
-}
-
-.cards {
-  display: grid;
-  gap: 1rem;
-}
-
-.card {
-  padding: 1rem;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.05rem;
-}
-
-.card p {
-  margin: 0;
-  color: #cbd5e1;
-}
-
-.role-actions {
+.index__hero-content {
+  position: relative;
+  z-index: 2;
   display: flex;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.index__hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.role-link {
+.index__hero-greeting {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 0.8rem 1rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
-  text-decoration: none;
-  font-weight: 700;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-/* Botón Notificaciones con estilos dinámicos */
-.notification-btn {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.25);
-  color: #fbbf24;
-}
-.notification-btn:hover, .notification-btn--active {
-  background: #fbbf24;
-  color: #111827;
-}
-
-.badge-count {
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 0.75rem;
+.index__hero-title {
+  margin: 0;
+  font-size: 2.1rem;
   font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 999px;
-  margin-left: 6px;
+  letter-spacing: -0.02em;
+  color: white;
 }
 
-/* SECCIÓN DE NOTIFICACIONES */
-.notifications-section {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 20px;
-  margin-top: 10px;
-}
-
-.noti-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 12px;
-  margin-bottom: 16px;
-}
-
-.noti-header h3 {
+.index__hero-sub {
   margin: 0;
-  color: #fbbf24;
-  font-size: 1.2rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 640px;
 }
 
-.close-noti-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #cbd5e1;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
+.index__hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.index__hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-out);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.index__hero-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.index__hero-glow {
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.index__notif {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.index__notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+.index__notif-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
   font-weight: 700;
 }
-.close-noti-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
 
-.noti-loading {
+.index__notif-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 30px;
+  gap: 8px;
 }
 
-.mini-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(251, 191, 36, 0.1);
-  border-top-color: #fbbf24;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 8px;
-}
-
-.noti-empty {
-  text-align: center;
-  color: #94a3b8;
-  padding: 30px;
-}
-
-/* Acordeón Notificaciones */
-.noti-accordion {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.noti-item {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-
-.noti-item:hover {
-  border-color: rgba(251, 191, 36, 0.2);
-}
-
-.noti-item--unread {
-  background: rgba(251, 191, 36, 0.04);
-  border-color: rgba(251, 191, 36, 0.15);
-}
-
-.noti-item__header {
-  padding: 14px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.index__notif-btn {
+  padding: 8px 14px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  gap: 12px;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 36px;
 }
 
-.noti-item__title-box {
+.index__notif-btn:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.index__notif-btn--ghost {
+  background: transparent;
+  border-color: var(--color-border-default);
+  color: var(--color-text-muted);
+}
+
+.index__notif-btn--ghost:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-primary);
+}
+
+.index__notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.index__notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.index__notif-item--unread {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-soft);
+}
+
+.index__notif-item:hover {
+  border-color: var(--color-border-default);
+}
+
+.index__notif-body {
+  flex: 1;
   min-width: 0;
 }
 
-.noti-status-dot {
-  width: 8px;
-  height: 8px;
-  background: #fbbf24;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.noti-item__title {
-  font-weight: 700;
-  color: #f3f4f6;
-  font-size: 0.95rem;
-}
-
-.noti-item__meta {
+.index__notif-top {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
-.noti-item__date {
+.index__notif-top strong {
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+.index__notif-date {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
-.noti-chevron {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-/* Cuerpo expandible */
-.noti-item__body {
-  padding: 14px 18px;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.noti-item__content {
-  margin: 0 0 12px 0;
-  font-size: 0.88rem;
-  color: #cbd5e1;
+.index__notif-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
   line-height: 1.5;
-  white-space: pre-line;
 }
 
-.noti-item__actions {
-  display: flex;
-  gap: 10px;
+.index__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
 }
 
-.noti-read-toggle-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.noti-read-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+.index__feature-card {
+  animation: fadeIn 0.4s var(--ease-out) backwards;
 }
 
-.noti-delete-btn {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.noti-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-}
-
-/* Redactor de notificaciones Admin */
-.admin-noti-composer {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.toggle-composer-btn {
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: #38bdf8;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  width: 100%;
-}
-.toggle-composer-btn:hover {
-  background: rgba(56, 189, 248, 0.2);
-}
-
-.composer-form {
-  margin-top: 14px;
-}
-
-.composer-form h4 {
-  margin: 0 0 12px;
-  color: #38bdf8;
-  font-size: 0.95rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.index__feature-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   margin-bottom: 12px;
 }
 
-.form-group label {
-  font-size: 0.75rem;
-  color: #94a3b8;
+.index__feature-icon--primary { background: var(--color-primary-soft); color: var(--color-primary); }
+.index__feature-icon--info { background: var(--color-info-soft); color: var(--color-info); }
+.index__feature-icon--admin { background: var(--color-role-admin-soft); color: var(--color-role-admin); }
+.index__feature-icon--teacher { background: var(--color-role-teacher-soft); color: var(--color-role-teacher); }
+.index__feature-icon--student { background: var(--color-role-student-soft); color: var(--color-role-student); }
+.index__feature-icon--neutral { background: var(--color-surface-3); color: var(--color-text-secondary); }
+
+.index__feature-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
-.form-group select,
-.form-group input,
-.form-group textarea {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-}
-.form-group textarea {
-  min-height: 70px;
-  resize: vertical;
+.index__feature-card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
-.send-btn {
-  background: #38bdf8;
-  color: #0f172a;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.send-btn:hover {
-  background: #0ea5e9;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Animaciones */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-
-.expand-enter-active, .expand-leave-active {
-  transition: max-height 0.25s ease-out, opacity 0.2s;
-  max-height: 200px;
-}
-.expand-enter-from, .expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
+@media (max-width: 768px) {
+  .index__hero { padding: 24px 20px; }
+  .index__hero-title { font-size: 1.6rem; }
 }
 </style>
