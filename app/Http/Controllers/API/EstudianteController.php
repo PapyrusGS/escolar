@@ -5,7 +5,8 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Services\EstudianteService;
 use App\Http\Requests\Estudiante\EditarPerfilRequest;
-use App\Http\Requests\Estudiante\CambiarContrasenaRequest; // Importamos el de contraseña también
+use App\Http\Requests\Estudiante\CambiarContrasenaRequest;
+use App\Http\Requests\Estudiante\InscribirCursoRequest; // Importamos el request de inscripción
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Throwable;
@@ -87,6 +88,51 @@ class EstudianteController extends Controller
             return response()->json([
                 'status' => false, 
                 'message' => 'Error al procesar el cambio de contraseña.', 
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * RF05 – Mostrar materias disponibles para el estudiante
+     */
+    public function cursosDisponibles(Request $request): JsonResponse
+    {
+        try {
+            // Llama al método actualizado del Servicio
+            $materias = $this->estudianteService->listarMateriasDisponibles($request->user()->IdUsuario);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Materias disponibles para inscripción obtenidas correctamente.',
+                'data' => $materias
+            ], 200);
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json(['status' => false, 'message' => 'Error al obtener cursos.', 'data' => []], 500);
+        }
+    }
+
+    /**
+     * RF05 – Permitir a estudiantes inscribirse a una materia
+     */
+    public function inscribirCurso(InscribirCursoRequest $request): JsonResponse
+    {
+        try {
+            // Pasamos el ID del usuario autenticado y el ID del curso-materia validado
+            $result = $this->estudianteService->procesarInscripcionMateria(
+                $request->user()->IdUsuario, 
+                $request->validated()['IdCursoMateria']
+            );
+
+            // Si status es true devuelve 201 (Created), si es false devuelve 400 (Bad Request)
+            return response()->json($result, $result['status'] ? 201 : 400);
+
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json([
+                'status' => false, 
+                'message' => 'Error al procesar la inscripción.', 
                 'data' => []
             ], 500);
         }

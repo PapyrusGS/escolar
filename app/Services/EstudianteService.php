@@ -53,4 +53,55 @@ class EstudianteService
             'data' => []
         ];
     }
+
+    /**
+     * RF05 – Lógica para listar materias según la modalidad del estudiante
+     */
+    public function listarMateriasDisponibles(int $idUsuario)
+    {
+        // 1. Conseguimos el registro académico del estudiante para sacar su modalidad
+        $estudianteCarrera = $this->estudianteRepo->getModalidadEstudiante($idUsuario);
+
+        if (!$estudianteCarrera) {
+            return [];
+        }
+
+        // 2. Pasamos el IdModalidad correcto al repositorio
+        return $this->estudianteRepo->getMateriasPorModalidad($idUsuario, $estudianteCarrera->IdModalidad);
+    }
+
+    /**
+     * RF05 – Lógica de inscripción controlando duplicidad por materia y turno
+     */
+    public function procesarInscripcionMateria(int $idUsuario, int $idCursoMateria): array
+    {
+        $materiaObjetivo = $this->estudianteRepo->findCursoMateriaConDetalles($idCursoMateria);
+        
+        if (!$materiaObjetivo) {
+            return ['status' => false, 'message' => 'El curso-materia seleccionado no existe.', 'data' => []];
+        }
+
+        // REGLA DE NEGOCIO: Evitar duplicidad o cruce de horarios
+        $yaInscrito = $this->estudianteRepo->verificarCruceODuplicado(
+            $idUsuario, 
+            $materiaObjetivo->IdMateria, 
+            $materiaObjetivo->IdTurno
+        );
+
+        if ($yaInscrito) {
+            return [
+                'status' => false,
+                'message' => 'Inscripción rechazada: Ya estás inscrito en esta materia o tienes otra materia en el mismo turno.',
+                'data' => []
+            ];
+        }
+
+        $exito = $this->estudianteRepo->registrarInscripcionMateria($idUsuario, $idCursoMateria);
+
+        return [
+            'status' => $exito,
+            'message' => $exito ? 'Inscripción a la materia realizada con éxito.' : 'No se pudo completar la inscripción.',
+            'data' => []
+        ];
+    }
 }
