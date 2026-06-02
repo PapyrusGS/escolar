@@ -6,9 +6,8 @@ import AppTopbar from './AppTopbar.vue';
 const props = defineProps({
   user: { type: Object, required: true },
   pageTitle: { type: String, default: '' },
-  unreadNotifications: { type: Number, default: 0 },
 });
-const emit = defineEmits(['logout', 'open-notifications']);
+const emit = defineEmits(['logout']);
 
 const collapsed = ref(false);
 const mobileOpen = ref(false);
@@ -42,7 +41,6 @@ const handleToggleMobile = (val) => {
       :user="user"
       :collapsed="collapsed"
       :mobile-open="mobileOpen"
-      :unread-notifications="unreadNotifications"
       @toggle-mobile="handleToggleMobile"
       @logout="emit('logout')"
     />
@@ -51,9 +49,7 @@ const handleToggleMobile = (val) => {
       <AppTopbar
         :user="user"
         :page-title="pageTitle"
-        :unread-notifications="unreadNotifications"
         @toggle-mobile="handleToggleMobile(true)"
-        @open-notifications="emit('open-notifications')"
       />
       <main class="app-shell__content">
         <slot />

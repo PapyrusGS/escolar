@@ -1,16 +1,19 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { BarChart3, FileText, FileSpreadsheet } from '@lucide/vue';
+import { BarChart3, FileText, FileSpreadsheet, ArrowLeft } from '@lucide/vue';
+import AppShell from './layout/AppShell.vue';
+import PageTransition from './layout/PageTransition.vue';
+import AppPageHeader from './ui/AppPageHeader.vue';
+import AppButton from './ui/AppButton.vue';
 import AppCard from './ui/AppCard.vue';
 import AppSelect from './ui/AppSelect.vue';
-import AppButton from './ui/AppButton.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
 
 const props = defineProps({
-  user: { type: Object, required: true },
+  user: { type: Object, default: null },
 });
 
 const currentUser = ref(props.user);
@@ -74,6 +77,15 @@ onMounted(async () => {
   }
   await loadTiposReporte();
 });
+
+const handleLogout = async () => {
+  try {
+    if (localStorage.getItem('auth_token')) await axios.post('/api/auth/logout');
+  } catch {}
+  localStorage.clear();
+  delete axios.defaults.headers.common.Authorization;
+  window.location.href = '/';
+};
 
 const loadTiposReporte = async () => {
   try {
@@ -186,17 +198,30 @@ const exportExcel = () => {
 </script>
 
 <template>
-  <div class="rep">
-    <AppCard padding="lg" class="rep__controls no-print">
-      <div class="rep__head">
-        <div class="rep__head-icon"><BarChart3 :size="22" /></div>
-        <div>
-          <h2>Panel de reportes</h2>
-          <p>Selecciona un reporte para visualizar los datos</p>
-        </div>
-      </div>
+  <AppShell v-if="currentUser" :user="currentUser" page-title="Reportes" @logout="handleLogout">
+    <PageTransition>
+      <div class="rep">
+        <AppPageHeader
+          title="Reportes académicos"
+          description="Genera y exporta reportes dinámicos según tu rol en el sistema."
+        >
+          <template #actions>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+              Volver al Dashboard
+            </AppButton>
+          </template>
+        </AppPageHeader>
 
-      <div class="rep__form">
+        <AppCard padding="lg" class="rep__controls no-print">
+          <div class="rep__head">
+            <div class="rep__head-icon"><BarChart3 :size="22" /></div>
+            <div>
+              <h2>Panel de reportes</h2>
+              <p>Selecciona un reporte para visualizar los datos</p>
+            </div>
+          </div>
+
+          <div class="rep__form">
         <AppSelect
           v-model="selectedTipo"
           label="Tipo de reporte"
@@ -297,7 +322,9 @@ const exportExcel = () => {
         <p>Documento oficial emitido por el Sistema Académico · Confidencial</p>
       </div>
     </AppCard>
-  </div>
+      </div>
+    </PageTransition>
+  </AppShell>
 </template>
 
 <style scoped>

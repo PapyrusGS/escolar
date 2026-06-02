@@ -13,6 +13,9 @@ import {
   LogOut,
   GraduationCap as School,
   X,
+  Award,
+  UserCheck,
+  Calendar,
 } from '@lucide/vue';
 import AppRoleBadge from '../ui/AppRoleBadge.vue';
 
@@ -32,50 +35,62 @@ const roleMap = {
   3: { label: 'Estudiante', className: 'student' },
 };
 
-const userRole = computed(() => roleMap[props.user?.IdRol] || { label: 'Usuario', className: 'default' });
+const userRole = computed(() => roleMap[Number(props.user?.IdRol)] || { label: 'Usuario', className: 'default' });
 
 const navItems = computed(() => {
+  const rol = Number(props.user?.IdRol);
   const items = [
-    { to: '/index', label: 'Panel', icon: LayoutDashboard, visible: true },
-    { to: '/dashboard', label: 'Dashboard', icon: BarChart3, visible: true },
-    { to: '/perfil', label: 'Mi perfil', icon: UserCircle, visible: true },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, visible: true },
   ];
 
-  if (props.user?.IdRol === 1) {
+  if (rol === 1) {
     items.push(
       { to: '/usuarios', label: 'Usuarios', icon: Users, visible: true },
       { to: '/usuarios/create', label: 'Registrar usuario', icon: UserPlus, visible: true },
       { to: '/cursos', label: 'Gestionar cursos', icon: GraduationCap, visible: true },
-      { to: '/cursos/visualizacion', label: 'Ver cursos', icon: BookOpen, visible: true },
-      { to: '/reportes', label: 'Reportes', icon: ClipboardList, visible: true }
+      { to: '/cursos/visualizacion', label: 'Cursos por usuario', icon: BookOpen, visible: true },
+      { to: '/reportes', label: 'Reportes', icon: BarChart3, visible: true },
     );
   }
 
-  if (props.user?.IdRol === 2) {
+  if (rol === 2) {
     items.push(
       { to: '/docente/cursos', label: 'Mis cursos', icon: GraduationCap, visible: true },
-      { to: '/docente/notas', label: 'Gestionar notas', icon: ClipboardList, visible: true }
+      { to: '/docente/notas', label: 'Gestionar notas', icon: ClipboardList, visible: true },
+      { to: '/reportes', label: 'Reportes', icon: BarChart3, visible: true },
     );
   }
 
-  if (props.user?.IdRol === 3) {
-    items.push({ to: '/cursos/visualizacion', label: 'Mis cursos', icon: BookOpen, visible: true });
+  if (rol === 3) {
+    items.push(
+      { to: '/cursos/visualizacion', label: 'Mis cursos', icon: BookOpen, visible: true },
+      { to: '/cursos/inscripcion', label: 'Inscripción a materias', icon: UserCheck, visible: true },
+      { to: '/mis-notas', label: 'Mis calificaciones', icon: Award, visible: true },
+      { to: '/reportes', label: 'Reportes', icon: BarChart3, visible: true },
+    );
   }
 
   items.push({
-    to: '#notifications',
+    to: '/notificaciones',
     label: 'Notificaciones',
     icon: Bell,
     visible: true,
     badge: props.unreadNotifications,
   });
 
+  items.push({
+    to: '/perfil',
+    label: 'Mi perfil',
+    icon: UserCircle,
+    visible: true,
+  });
+
   return items.filter((i) => i.visible);
 });
 
 const isActive = (to) => {
-  if (to === '#notifications') return false;
-  return route.value === to || route.value.startsWith(to + '/');
+  if (!to || to.startsWith('#')) return false;
+  return route.value === to || (to !== '/' && route.value.startsWith(to + '/'));
 };
 
 const initials = computed(() => {
@@ -99,8 +114,8 @@ const initials = computed(() => {
         <School :size="22" :stroke-width="2.5" />
       </div>
       <div v-if="!collapsed" class="app-sidebar__brand-text">
-        <span class="app-sidebar__brand-title">Sistema Escolar</span>
-        <span class="app-sidebar__brand-sub">v2.0</span>
+        <span class="app-sidebar__brand-title">Sistema Universitario</span>
+        <span class="app-sidebar__brand-sub">Plataforma académica</span>
       </div>
       <button
         v-if="mobileOpen"
@@ -114,7 +129,7 @@ const initials = computed(() => {
 
     <nav class="app-sidebar__nav" aria-label="Secciones">
       <ul>
-        <li v-for="item in navItems" :key="item.label">
+        <li v-for="item in navItems" :key="item.to">
           <a
             :href="item.to"
             :class="['app-sidebar__link', isActive(item.to) && 'app-sidebar__link--active']"
@@ -136,7 +151,7 @@ const initials = computed(() => {
 
     <div class="app-sidebar__footer">
       <div v-if="!collapsed" class="app-sidebar__user">
-        <div class="app-sidebar__avatar">{{ initials }}</div>
+        <div class="app-sidebar__avatar" :class="`app-sidebar__avatar--${userRole.className}`">{{ initials }}</div>
         <div class="app-sidebar__user-info">
           <span class="app-sidebar__user-name">{{ user?.Nombre1 }} {{ user?.Apellido1 }}</span>
           <AppRoleBadge :role="userRole.className" :label="userRole.label" size="sm" />
@@ -207,7 +222,7 @@ const initials = computed(() => {
   color: var(--color-text-muted);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .app-sidebar__close {
@@ -321,6 +336,18 @@ const initials = computed(() => {
   font-weight: 700;
   font-size: 0.8rem;
   flex-shrink: 0;
+}
+
+.app-sidebar__avatar--admin {
+  background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
+}
+
+.app-sidebar__avatar--teacher {
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+}
+
+.app-sidebar__avatar--student {
+  background: linear-gradient(135deg, #c084fc 0%, #ec4899 100%);
 }
 
 .app-sidebar__user-info {

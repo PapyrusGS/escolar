@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#060912">
-    <title>Sistema Escolar · Iniciar sesión</title>
+    <title>Sistema Universitario · Iniciar sesión</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>

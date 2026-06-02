@@ -42,16 +42,16 @@
   --color-info-soft: rgba(14, 165, 233, 0.12);
   --color-info-border: rgba(14, 165, 233, 0.32);
 
-  /* ===== Roles ===== */
-  --color-role-admin: #f59e0b;
-  --color-role-admin-soft: rgba(245, 158, 11, 0.14);
-  --color-role-admin-border: rgba(245, 158, 11, 0.35);
-  --color-role-teacher: #0ea5e9;
-  --color-role-teacher-soft: rgba(14, 165, 233, 0.14);
-  --color-role-teacher-border: rgba(14, 165, 233, 0.35);
-  --color-role-student: #8b5cf6;
-  --color-role-student-soft: rgba(139, 92, 246, 0.14);
-  --color-role-student-border: rgba(139, 92, 246, 0.35);
+  /* ===== Roles (alto contraste sobre fondo oscuro) ===== */
+  --color-role-admin: #fbbf24;
+  --color-role-admin-soft: rgba(251, 191, 36, 0.22);
+  --color-role-admin-border: rgba(251, 191, 36, 0.55);
+  --color-role-teacher: #38bdf8;
+  --color-role-teacher-soft: rgba(56, 189, 248, 0.22);
+  --color-role-teacher-border: rgba(56, 189, 248, 0.55);
+  --color-role-student: #c084fc;
+  --color-role-student-soft: rgba(192, 132, 252, 0.24);
+  --color-role-student-border: rgba(192, 132, 252, 0.6);
 
   /* ===== Texto ===== */
   --color-text-primary: #f1f5f9;

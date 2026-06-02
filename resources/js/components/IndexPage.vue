@@ -18,15 +18,8 @@ import AppShell from './layout/AppShell.vue';
 import PageTransition from './layout/PageTransition.vue';
 import AppCard from './ui/AppCard.vue';
 import AppRoleBadge from './ui/AppRoleBadge.vue';
-import AppBadge from './ui/AppBadge.vue';
-import AppEmptyState from './ui/AppEmptyState.vue';
-import { toast } from '../lib/toast.js';
 
 const user = ref(null);
-const notifications = ref([]);
-const showNotifications = ref(false);
-
-const unreadCount = computed(() => notifications.value.filter((n) => n.Estado).length);
 
 const roleMap = {
   1: {
@@ -119,8 +112,6 @@ onMounted(async () => {
     const { data } = await axios.get('/api/auth/perfil');
     user.value = data.data.user;
     localStorage.setItem('auth_user', JSON.stringify(user.value));
-
-    await fetchNotifications();
   } catch (err) {
     console.error(err);
     localStorage.removeItem('auth_token');
@@ -129,15 +120,6 @@ onMounted(async () => {
     window.location.href = '/';
   }
 });
-
-const fetchNotifications = async () => {
-  try {
-    const { data } = await axios.get('/api/notificaciones');
-    notifications.value = data.data || [];
-  } catch (err) {
-    console.error('Error cargando notificaciones:', err);
-  }
-};
 
 const handleLogout = async () => {
   try {
@@ -154,37 +136,13 @@ const handleLogout = async () => {
   }
 };
 
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value;
-};
-
-const markAllAsRead = async () => {
-  try {
-    await Promise.all(
-      notifications.value
-        .filter((n) => n.Estado)
-        .map((n) => axios.patch(`/api/notificaciones/${n.IdNotificacion}/toggle`))
-    );
-    notifications.value.forEach((n) => (n.Estado = false));
-    toast.success('Notificaciones marcadas como leídas');
-  } catch (err) {
-    toast.error('No se pudieron actualizar las notificaciones');
-  }
-};
-
-const formatDateTime = (d) => {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
 </script>
 
 <template>
   <AppShell
     v-if="user"
     :user="user"
-    :unread-notifications="unreadCount"
     @logout="handleLogout"
-    @open-notifications="toggleNotifications"
   >
     <PageTransition>
       <div class="index">
@@ -212,42 +170,6 @@ const formatDateTime = (d) => {
             </div>
           </div>
           <div class="index__hero-glow"></div>
-        </section>
-
-        <!-- Notificaciones inline -->
-        <section v-if="showNotifications" class="index__notif">
-          <div class="index__notif-head">
-            <h3>Bandeja de Notificaciones</h3>
-            <div class="index__notif-actions">
-              <button v-if="unreadCount > 0" class="index__notif-btn" @click="markAllAsRead">
-                Marcar todas como leídas
-              </button>
-              <button class="index__notif-btn index__notif-btn--ghost" @click="showNotifications = false">
-                Cerrar
-              </button>
-            </div>
-          </div>
-
-          <div v-if="notifications.length === 0">
-            <AppEmptyState title="Sin notificaciones" description="No tienes notificaciones en este momento." />
-          </div>
-
-          <ul v-else class="index__notif-list">
-            <li
-              v-for="noti in notifications"
-              :key="noti.IdNotificacion"
-              :class="['index__notif-item', noti.Estado && 'index__notif-item--unread']"
-            >
-              <div class="index__notif-body">
-                <div class="index__notif-top">
-                  <strong>{{ noti.Titulo }}</strong>
-                  <span class="index__notif-date">{{ formatDateTime(noti.FechaEnvio) }}</span>
-                </div>
-                <p>{{ noti.Contenido }}</p>
-              </div>
-              <AppBadge v-if="noti.Estado" variant="primary" size="sm">Nueva</AppBadge>
-            </li>
-          </ul>
         </section>
 
         <!-- Feature cards -->

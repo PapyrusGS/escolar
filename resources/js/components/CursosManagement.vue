@@ -337,7 +337,7 @@ const handleLogout = async () => {
     <PageTransition>
       <div class="cm">
         <AppPageHeader
-          eyebrow="RF04 · Módulo académico"
+          eyebrow="Módulo académico"
           title="Gestión de cursos programados"
           description="Programa materias, asigna docentes, aulas y turnos para el ciclo lectivo."
         >
@@ -496,7 +496,7 @@ const handleLogout = async () => {
           </footer>
         </AppCard>
 
-        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/index'">
+        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
           Volver al panel principal
         </AppButton>
       </div>

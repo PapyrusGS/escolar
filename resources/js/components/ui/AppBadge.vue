@@ -98,15 +98,18 @@ const props = defineProps({
   background: var(--color-role-admin-soft);
   color: var(--color-role-admin);
   border-color: var(--color-role-admin-border);
+  font-weight: 800;
 }
 .app-badge--teacher {
   background: var(--color-role-teacher-soft);
   color: var(--color-role-teacher);
   border-color: var(--color-role-teacher-border);
+  font-weight: 800;
 }
 .app-badge--student {
   background: var(--color-role-student-soft);
   color: var(--color-role-student);
   border-color: var(--color-role-student-border);
+  font-weight: 800;
 }
 </style>

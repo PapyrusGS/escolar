@@ -27,10 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.role' => \App\Http\Middleware\EnsureAdminRole::class,
             'teacher.role' => \App\Http\Middleware\EnsureTeacherRole::class,
         ]);
+
+        $middleware->redirectGuestsTo(fn () => route('welcome'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $e, Request $request) {
-            if (! $request->expectsJson()) {
+            if (! $request->expectsJson() && ! $request->is('api/*')) {
                 return null;
             }
 
@@ -42,8 +44,8 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {
-            if (! $request->expectsJson()) {
-                return null;
+            if (! $request->expectsJson() && ! $request->is('api/*')) {
+                return redirect('/');
             }
 
             return response()->json([

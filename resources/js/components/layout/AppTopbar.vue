@@ -1,15 +1,14 @@
 <script setup>
 import { computed } from 'vue';
-import { Bell, Search, Menu } from '@lucide/vue';
+import { Menu } from '@lucide/vue';
 import AppAvatar from '../ui/AppAvatar.vue';
 import AppRoleBadge from '../ui/AppRoleBadge.vue';
 
 const props = defineProps({
   user: { type: Object, required: true },
   pageTitle: { type: String, default: '' },
-  unreadNotifications: { type: Number, default: 0 },
 });
-const emit = defineEmits(['toggle-mobile', 'open-notifications']);
+const emit = defineEmits(['toggle-mobile']);
 
 const roleMap = {
   1: { label: 'Administrador', className: 'admin' },
@@ -37,18 +36,6 @@ const fullName = computed(() => `${props.user?.Nombre1 || ''} ${props.user?.Apel
     </div>
 
     <div class="app-topbar__right">
-      <button
-        class="app-topbar__bell"
-        :class="{ 'app-topbar__bell--has-unread': unreadNotifications > 0 }"
-        :aria-label="`Notificaciones${unreadNotifications > 0 ? `, ${unreadNotifications} sin leer` : ''}`"
-        @click="emit('open-notifications')"
-      >
-        <Bell :size="20" />
-        <span v-if="unreadNotifications > 0" class="app-topbar__bell-dot">
-          {{ unreadNotifications > 9 ? '9+' : unreadNotifications }}
-        </span>
-      </button>
-
       <div class="app-topbar__user">
         <AppAvatar :name="fullName" size="sm" />
         <div class="app-topbar__user-info">
@@ -118,48 +105,6 @@ const fullName = computed(() => `${props.user?.Nombre1 || ''} ${props.user?.Apel
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-}
-
-.app-topbar__bell {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border-default);
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-out);
-}
-
-.app-topbar__bell:hover {
-  background: var(--color-surface-3);
-  color: var(--color-text-primary);
-}
-
-.app-topbar__bell--has-unread {
-  color: var(--color-primary);
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-soft);
-}
-
-.app-topbar__bell-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: var(--color-danger);
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  border-radius: var(--radius-full);
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--color-surface-1);
 }
 
 .app-topbar__user {

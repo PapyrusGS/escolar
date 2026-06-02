@@ -1,5 +1,5 @@
 @extends('layouts.app')
 
-@section('title', 'Reportes Académicos · Sistema Escolar')
+@section('title', 'Reportes Académicos · Sistema Universitario')
 
 @section('mount-id', 'reportes-app')

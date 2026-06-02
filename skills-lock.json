@@ -7,6 +7,18 @@
       "skillPath": "skills/gsap-core/SKILL.md",
       "computedHash": "b891c9ed42d9319685250231085ebe21538f2c844613b277b9dd2b3ff529a542"
     },
+    "laravel-specialist": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/laravel-specialist/SKILL.md",
+      "computedHash": "805be17bd59f759e2f2f2dcbd6bd205ca6678420a87b21da1c16e0793093615c"
+    },
+    "php-pro": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/php-pro/SKILL.md",
+      "computedHash": "1cd5289325d0924d6fca4f950711bc9b63d873338cf3b4acd00db62603aebeda"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",

@@ -172,13 +172,13 @@ const handleLogout = async () => {
     <PageTransition>
       <div class="up">
         <AppPageHeader
-          eyebrow="RF03 · Perfil"
+          eyebrow="Perfil de usuario"
           title="Mi perfil"
           description="Visualiza tu información académica, personal y administra la seguridad de tu cuenta."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/index'">
-              Volver al panel
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+              Volver al Dashboard
             </AppButton>
           </template>
         </AppPageHeader>

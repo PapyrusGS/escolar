@@ -13,6 +13,8 @@ import AdminNotificacion from './components/AdminNotificacion.vue';
 import AdminReporte from './components/AdminReporte.vue';
 import DocenteCursos from './components/DocenteCursos.vue';
 import DocenteNotas from './components/DocenteNotas.vue';
+import MisNotas from './components/MisNotas.vue';
+import InscripcionMaterias from './components/InscripcionMaterias.vue';
 import AppToastStack from './components/ui/AppToastStack.vue';
 
 const mounts = [
@@ -29,6 +31,9 @@ const mounts = [
     { id: 'admin-reporte-app', component: AdminReporte },
     { id: 'docente-cursos-app', component: DocenteCursos },
     { id: 'docente-notas-app', component: DocenteNotas },
+    { id: 'mis-notas-app', component: MisNotas },
+    { id: 'inscripcion-materias-app', component: InscripcionMaterias },
+    { id: 'notificaciones-app', component: AdminNotificacion },
 ];
 
 for (const mount of mounts) {

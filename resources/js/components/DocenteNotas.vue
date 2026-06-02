@@ -196,13 +196,13 @@ const handleLogout = async () => {
     <PageTransition>
       <div class="dn">
         <AppPageHeader
-          eyebrow="RF07 · Calificaciones"
+          eyebrow="Panel del docente"
           title="Gestión de notas"
           description="Asigna, edita y visualiza el rendimiento de tus alumnos por curso."
         >
           <template #actions>
             <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/docente/cursos'">Mis cursos</AppButton>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/index'">Panel</AppButton>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">Volver al Dashboard</AppButton>
           </template>
         </AppPageHeader>
 

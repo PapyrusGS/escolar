@@ -110,12 +110,12 @@ const handleLogout = async () => {
     <PageTransition>
       <div class="ucf">
         <AppPageHeader
-          eyebrow="RF01"
+          eyebrow="Módulo administrativo"
           title="Registro de usuarios"
           description="Alta de nuevos usuarios con selección de rol y validación de datos."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/index'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
               Volver al panel
             </AppButton>
           </template>

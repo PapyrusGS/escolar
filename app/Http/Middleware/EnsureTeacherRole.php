@@ -10,12 +10,20 @@ class EnsureTeacherRole
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $usuario = $request->user();
+        $user = $request->user();
 
-        if (! $usuario || (int) $usuario->IdRol !== 2) {
+        if (! $user) {
             return response()->json([
                 'status' => false,
-                'message' => 'No tienes permisos para realizar esta acción.',
+                'message' => 'No autenticado.',
+                'data' => [],
+            ], 401);
+        }
+
+        if ((int) $user->IdRol !== 2) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No tienes permisos para acceder a este recurso.',
                 'data' => [],
             ], 403);
         }

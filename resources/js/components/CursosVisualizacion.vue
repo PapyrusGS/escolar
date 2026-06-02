@@ -171,12 +171,12 @@ const handleLogout = async () => {
     <PageTransition>
       <div class="cv">
         <AppPageHeader
-          eyebrow="RF06 · Visualización"
+          eyebrow="Módulo académico"
           title="Cursos por usuario"
           description="Consulta el historial y programación de clases de estudiantes y docentes en el ciclo lectivo."
         >
           <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/index'">
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
               Volver al panel
             </AppButton>
           </template>

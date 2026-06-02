@@ -327,7 +327,7 @@ const columns = [
     <PageTransition>
       <div class="um">
         <AppPageHeader
-          eyebrow="RF09 · Módulo administrativo"
+          eyebrow="Módulo administrativo"
           title="Gestión de usuarios"
           description="Listar, editar, activar y eliminar cuentas de usuarios académicos."
         >
@@ -488,7 +488,7 @@ const columns = [
           </footer>
         </AppCard>
 
-        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/index'">
+        <AppButton variant="ghost" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
           Volver al panel principal
         </AppButton>
       </div>

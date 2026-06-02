@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import {
+  ArrowLeft,
   Bell,
   Send,
   X,
@@ -10,8 +11,11 @@ import {
   Trash2,
   Plus,
 } from '@lucide/vue';
-import AppCard from './ui/AppCard.vue';
+import AppShell from './layout/AppShell.vue';
+import PageTransition from './layout/PageTransition.vue';
+import AppPageHeader from './ui/AppPageHeader.vue';
 import AppButton from './ui/AppButton.vue';
+import AppCard from './ui/AppCard.vue';
 import AppBadge from './ui/AppBadge.vue';
 import AppInput from './ui/AppInput.vue';
 import AppSelect from './ui/AppSelect.vue';
@@ -20,9 +24,10 @@ import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
 
 const props = defineProps({
-  userRole: { type: Number, required: true },
+  userRole: { type: Number, default: null },
 });
 
+const currentUser = ref(null);
 const notifications = ref([]);
 const usuarios = ref([]);
 const loading = ref(false);
@@ -51,9 +56,23 @@ const formatDateTime = (d) => {
 const getRoleName = (id) => ({ 1: 'Admin', 2: 'Docente', 3: 'Estudiante' }[id] || 'Usuario');
 
 onMounted(async () => {
+  if (!currentUser.value) {
+    const stored = localStorage.getItem('auth_user');
+    if (stored) currentUser.value = JSON.parse(stored);
+  }
   await loadNotifications();
-  if (props.userRole === 1) await loadUsuarios();
+  const rol = props.userRole ?? Number(currentUser.value?.IdRol);
+  if (rol === 1) await loadUsuarios();
 });
+
+const handleLogout = async () => {
+  try {
+    if (localStorage.getItem('auth_token')) await axios.post('/api/auth/logout');
+  } catch {}
+  localStorage.clear();
+  delete axios.defaults.headers.common.Authorization;
+  window.location.href = '/';
+};
 
 const loadNotifications = async () => {
   loading.value = true;
@@ -119,44 +138,60 @@ const userOptions = computed(() =>
     Nombre: `[${getRoleName(u.IdRol)}] ${u.Nombre1} ${u.Apellido1} (${u.Correo})`,
   }))
 );
+
+const effectiveRole = computed(() => props.userRole ?? Number(currentUser.value?.IdRol));
 </script>
 
 <template>
-  <AppCard padding="lg">
-    <!-- Header -->
-    <div class="notif__header">
-      <div class="notif__title">
-        <div class="notif__icon">
-          <Bell :size="22" />
-        </div>
-        <div>
-          <h2>Bandeja de notificaciones</h2>
-          <p>Gestiona tus avisos académicos y del sistema</p>
-        </div>
-      </div>
-
-      <div class="notif__filters">
-        <button
-          v-for="filter in ['all', 'unread', 'read']"
-          :key="filter"
-          :class="['notif__filter', currentFilter === filter && 'notif__filter--active']"
-          @click="currentFilter = filter"
+  <AppShell v-if="currentUser" :user="currentUser" page-title="Notificaciones" @logout="handleLogout">
+    <PageTransition>
+      <div class="notif-page">
+        <AppPageHeader
+          title="Notificaciones"
+          description="Gestiona tus avisos académicos y mensajes del sistema."
         >
-          {{ { all: 'Todas', unread: 'Pendientes', read: 'Archivadas' }[filter] }}
-          <span v-if="counts[filter] > 0" class="notif__filter-count">{{ counts[filter] }}</span>
-        </button>
-      </div>
-    </div>
+          <template #actions>
+            <AppButton variant="secondary" :icon="ArrowLeft" @click="window.location.href = '/dashboard'">
+              Volver al Dashboard
+            </AppButton>
+          </template>
+        </AppPageHeader>
 
-    <!-- Admin composer -->
-    <div v-if="userRole === 1" class="notif__composer-zone">
-      <AppButton
-        :variant="showComposer ? 'secondary' : 'primary'"
-        :icon="showComposer ? X : Plus"
-        @click="showComposer = !showComposer"
-      >
-        {{ showComposer ? 'Cancelar envío' : 'Redactar notificación' }}
-      </AppButton>
+        <AppCard padding="lg">
+          <!-- Header -->
+          <div class="notif__header">
+            <div class="notif__title">
+              <div class="notif__icon">
+                <Bell :size="22" />
+              </div>
+              <div>
+                <h2>Bandeja de notificaciones</h2>
+                <p>Gestiona tus avisos académicos y del sistema</p>
+              </div>
+            </div>
+
+            <div class="notif__filters">
+              <button
+                v-for="filter in ['all', 'unread', 'read']"
+                :key="filter"
+                :class="['notif__filter', currentFilter === filter && 'notif__filter--active']"
+                @click="currentFilter = filter"
+              >
+                {{ { all: 'Todas', unread: 'Pendientes', read: 'Archivadas' }[filter] }}
+                <span v-if="counts[filter] > 0" class="notif__filter-count">{{ counts[filter] }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Admin composer -->
+          <div v-if="effectiveRole === 1" class="notif__composer-zone">
+            <AppButton
+              :variant="showComposer ? 'secondary' : 'primary'"
+              :icon="showComposer ? X : Plus"
+              @click="showComposer = !showComposer"
+            >
+              {{ showComposer ? 'Cancelar envío' : 'Redactar notificación' }}
+            </AppButton>
 
       <Transition name="slide">
         <form v-if="showComposer" @submit.prevent="sendNotification" class="notif__composer">
@@ -232,10 +267,19 @@ const userOptions = computed(() =>
         </button>
       </li>
     </ul>
-  </AppCard>
+        </AppCard>
+      </div>
+    </PageTransition>
+  </AppShell>
 </template>
 
 <style scoped>
+.notif-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
 .notif__header {
   display: flex;
   align-items: center;

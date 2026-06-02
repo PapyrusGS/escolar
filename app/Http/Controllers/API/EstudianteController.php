@@ -4,9 +4,10 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Services\EstudianteService;
+use App\Services\EstudianteNotasService;
 use App\Http\Requests\Estudiante\EditarPerfilRequest;
 use App\Http\Requests\Estudiante\CambiarContrasenaRequest;
-use App\Http\Requests\Estudiante\InscribirCursoRequest; // Importamos el request de inscripción
+use App\Http\Requests\Estudiante\InscribirCursoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Throwable;
@@ -14,7 +15,8 @@ use Throwable;
 class EstudianteController extends Controller
 {
     public function __construct(
-        protected readonly EstudianteService $estudianteService
+        protected readonly EstudianteService $estudianteService,
+        protected readonly EstudianteNotasService $estudianteNotasService,
     ) {}
 
     /**
@@ -121,7 +123,7 @@ class EstudianteController extends Controller
         try {
             // Pasamos el ID del usuario autenticado y el ID del curso-materia validado
             $result = $this->estudianteService->procesarInscripcionMateria(
-                $request->user()->IdUsuario, 
+                $request->user()->IdUsuario,
                 $request->validated()['IdCursoMateria']
             );
 
@@ -131,9 +133,31 @@ class EstudianteController extends Controller
         } catch (Throwable $e) {
             report($e);
             return response()->json([
-                'status' => false, 
-                'message' => 'Error al procesar la inscripción.', 
+                'status' => false,
+                'message' => 'Error al procesar la inscripción.',
                 'data' => []
+            ], 500);
+        }
+    }
+
+    public function misNotas(Request $request): JsonResponse
+    {
+        try {
+            $data = $this->estudianteNotasService->obtenerNotasPorEstudiante(
+                (int) $request->user()->IdUsuario
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Calificaciones obtenidas correctamente.',
+                'data' => $data,
+            ], 200);
+        } catch (Throwable $e) {
+            report($e);
+            return response()->json([
+                'status' => false,
+                'message' => 'Error al obtener las calificaciones.',
+                'data' => null,
             ], 500);
         }
     }

@@ -1,14 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-import { Mail, Lock, GraduationCap, ArrowRight, Eye, EyeOff } from '@lucide/vue';
+import { Mail, Lock, GraduationCap, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck, BookOpen, Award } from '@lucide/vue';
 import axios from 'axios';
 import AppInput from './ui/AppInput.vue';
 import AppButton from './ui/AppButton.vue';
 import AppAlert from './ui/AppAlert.vue';
-import { useGsap } from '../composables/useGsap.js';
-
-const root = ref(null);
-const { pageEnter, staggerIn } = useGsap();
 
 const form = ref({ Correo: '', Contrasena: '' });
 const showPassword = ref(false);
@@ -16,10 +12,10 @@ const loading = ref(false);
 const errorMsg = ref('');
 
 onMounted(() => {
-  if (root.value) {
-    pageEnter(root.value);
-    const els = root.value.querySelectorAll('[data-anim]');
-    if (els.length) staggerIn(els, { delay: 0.1 });
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    window.location.href = '/dashboard';
   }
 });
 
@@ -36,7 +32,7 @@ const submit = async () => {
     localStorage.setItem('auth_token', data.data.token);
     localStorage.setItem('auth_user', JSON.stringify(data.data.user));
     axios.defaults.headers.common.Authorization = `Bearer ${data.data.token}`;
-    window.location.href = '/index';
+    window.location.href = '/dashboard';
   } catch (err) {
     errorMsg.value = err.response?.data?.message || 'Credenciales inválidas o usuario inactivo.';
   } finally {
@@ -46,21 +42,21 @@ const submit = async () => {
 </script>
 
 <template>
-  <div ref="root" class="login">
+  <div class="login">
     <div class="login__card">
-      <div class="login__brand" data-anim>
+      <div class="login__brand">
         <div class="login__logo">
           <GraduationCap :size="28" :stroke-width="2.2" />
         </div>
         <div>
-          <h1 class="login__title">Sistema Escolar</h1>
+          <h1 class="login__title">Sistema Universitario</h1>
           <p class="login__subtitle">Plataforma académica integral</p>
         </div>
       </div>
 
-      <div class="login__welcome" data-anim>
+      <div class="login__welcome">
         <h2>Bienvenido de vuelta</h2>
-        <p>Ingresa con tus credenciales para continuar</p>
+        <p>Ingresa con tus credenciales para acceder al sistema</p>
       </div>
 
       <AppAlert
@@ -68,11 +64,10 @@ const submit = async () => {
         variant="danger"
         :title="errorMsg"
         class="login__alert"
-        data-anim
       />
 
-      <form class="login__form" @submit.prevent="submit">
-        <div data-anim>
+      <form class="login__form" @submit.prevent="submit" novalidate>
+        <div>
           <AppInput
             v-model="form.Correo"
             label="Correo institucional"
@@ -84,7 +79,7 @@ const submit = async () => {
           />
         </div>
 
-        <div data-anim class="login__password-wrap">
+        <div class="login__password-wrap">
           <AppInput
             v-model="form.Contrasena"
             label="Contraseña"
@@ -104,23 +99,35 @@ const submit = async () => {
           </button>
         </div>
 
-        <div data-anim>
+        <div>
           <AppButton type="submit" variant="primary" size="lg" :loading="loading" block>
             <template v-if="!loading">
-              Ingresar
+              Ingresar al sistema
               <ArrowRight :size="18" />
             </template>
           </AppButton>
         </div>
       </form>
 
-      <p class="login__footer" data-anim>
+      <div class="login__features">
+        <div class="login__feature">
+          <ShieldCheck :size="18" />
+          <span>Acceso seguro</span>
+        </div>
+        <div class="login__feature">
+          <BookOpen :size="18" />
+          <span>Gestión académica</span>
+        </div>
+        <div class="login__feature">
+          <Award :size="18" />
+          <span>Calificaciones</span>
+        </div>
+      </div>
+
+      <p class="login__footer">
+        <Sparkles :size="12" />
         Acceso restringido a personal autorizado
       </p>
-    </div>
-
-    <div class="login__hero">
-      <div class="login__hero-glow"></div>
     </div>
   </div>
 </template>
@@ -129,58 +136,25 @@ const submit = async () => {
 .login {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding: 24px;
-  gap: 48px;
-  max-width: 1280px;
-  margin: 0 auto;
-}
-
-.login__hero {
-  position: relative;
-  display: grid;
   place-items: center;
-  min-height: 540px;
-  border-radius: var(--radius-2xl);
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #8b5cf6 50%, #ec4899 100%);
-  box-shadow: var(--shadow-xl);
-}
-
-.login__hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.18) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.12) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.login__hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.06) 49%, rgba(255, 255, 255, 0.06) 51%, transparent 52%);
-  background-size: 28px 28px;
-  pointer-events: none;
-  opacity: 0.5;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99, 102, 241, 0.18), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(139, 92, 246, 0.10), transparent 60%);
 }
 
 .login__card {
   position: relative;
   width: 100%;
   max-width: 460px;
-  margin: 0 auto;
   padding: 40px;
-  background: linear-gradient(180deg, rgba(28, 39, 66, 0.55) 0%, rgba(19, 28, 48, 0.65) 100%);
+  background: linear-gradient(180deg, rgba(28, 39, 66, 0.65) 0%, rgba(19, 28, 48, 0.75) 100%);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
+  animation: fadeUp 0.4s var(--ease-out) both;
 }
 
 .login__brand {
@@ -199,6 +173,7 @@ const submit = async () => {
   color: white;
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+  flex-shrink: 0;
 }
 
 .login__title {
@@ -206,6 +181,7 @@ const submit = async () => {
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--color-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .login__subtitle {
@@ -263,24 +239,51 @@ const submit = async () => {
   margin-top: 16px;
 }
 
-.login__footer {
-  margin: 24px 0 0;
-  text-align: center;
+.login__features {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+.login__feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.78rem;
+  font-weight: 600;
   color: var(--color-text-muted);
 }
 
-@media (max-width: 900px) {
-  .login {
-    grid-template-columns: 1fr;
-    gap: 24px;
-    padding: 16px;
-  }
-  .login__hero {
-    display: none;
-  }
-  .login__card {
-    padding: 32px 24px;
-  }
+.login__feature :deep(svg) {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.login__footer {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 520px) {
+  .login { padding: 16px; }
+  .login__card { padding: 28px 22px; }
+  .login__welcome h2 { font-size: 1.3rem; }
+  .login__features { justify-content: center; }
 }
 </style>
