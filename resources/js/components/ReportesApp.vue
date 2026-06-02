@@ -1,19 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { BarChart3, FileText, FileSpreadsheet, ArrowLeft } from '@lucide/vue';
+import { BarChart3, FileText, FileSpreadsheet } from '@lucide/vue';
 import AppShell from './layout/AppShell.vue';
 import PageTransition from './layout/PageTransition.vue';
-import AppPageHeader from './ui/AppPageHeader.vue';
 import AppButton from './ui/AppButton.vue';
 import AppCard from './ui/AppCard.vue';
 import AppSelect from './ui/AppSelect.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
-import { useGoTo } from '../composables/useGoTo.js';
-
-const { goTo } = useGoTo();
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -32,8 +28,30 @@ const loading = ref(false);
 const userFullName = computed(() =>
   currentUser.value ? `${currentUser.value.Nombre1} ${currentUser.value.Apellido1}` : 'Usuario'
 );
+const userRole = computed(() => {
+  const r = currentUser.value?.IdRol;
+  if (r === 1) return 'Administrador';
+  if (r === 2) return 'Docente';
+  if (r === 3) return 'Estudiante';
+  return 'Usuario';
+});
+
+const filtrosAplicados = computed(() => {
+  if (!filterValues.value || !Object.keys(filterValues.value).length) return 'Todos los registros';
+  const parts = [];
+  for (const f of filtrosActuales.value) {
+    const v = filterValues.value[f.nombre];
+    if (v === '' || v == null) continue;
+    const opt = (filterOptions.value[f.nombre] || []).find((o) => String(o.Id ?? o.IdUsuario ?? o.IdCurso) === String(v));
+    const label = opt ? formatOption(opt, f.endpoint) : v;
+    parts.push(`${f.label}: ${label}`);
+  }
+  return parts.length ? parts.join(' · ') : 'Todos los registros';
+});
+
+const generatedAt = ref(new Date());
 const currentDateTime = computed(() =>
-  new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  generatedAt.value.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 );
 
 const isInfoAlumno = computed(() => selectedTipo.value === 'info_alumno');
@@ -172,7 +190,8 @@ const printPDF = () => {
     toast.warning('No hay datos para imprimir');
     return;
   }
-  window.print();
+  generatedAt.value = new Date();
+  setTimeout(() => window.print(), 80);
 };
 
 const exportExcel = () => {
@@ -204,17 +223,6 @@ const exportExcel = () => {
   <AppShell v-if="currentUser" :user="currentUser" page-title="Reportes" @logout="handleLogout">
     <PageTransition>
       <div class="rep">
-        <AppPageHeader
-          title="Reportes académicos"
-          description="Genera y exporta reportes dinámicos según tu rol en el sistema."
-        >
-          <template #actions>
-            <AppButton variant="secondary" :icon="ArrowLeft" @click="goTo('/dashboard')">
-              Volver al Dashboard
-            </AppButton>
-          </template>
-        </AppPageHeader>
-
         <AppCard padding="lg" class="rep__controls no-print">
           <div class="rep__head">
             <div class="rep__head-icon"><BarChart3 :size="22" /></div>
@@ -269,14 +277,18 @@ const exportExcel = () => {
 
     <AppCard v-else padding="none" class="rep__canvas">
       <div class="rep__print-head only-print">
-        <div>
-          <span class="rep__print-badge">SISTEMA DE GESTIÓN ESCOLAR</span>
-          <h1>{{ reportTitle }}</h1>
+        <div class="rep__print-brand">
+          <div class="rep__print-logo">SU</div>
+          <div>
+            <span class="rep__print-badge">SISTEMA UNIVERSITARIO</span>
+            <h1>{{ reportTitle }}</h1>
+          </div>
         </div>
         <div class="rep__print-meta">
-          <p><strong>Reporte:</strong> {{ reportTitle }}</p>
-          <p><strong>Fecha:</strong> {{ currentDateTime }}</p>
-          <p><strong>Emitido por:</strong> {{ userFullName }}</p>
+          <div class="rep__print-meta-row"><span>Emitido por</span><strong>{{ userFullName }} · {{ userRole }}</strong></div>
+          <div class="rep__print-meta-row"><span>Fecha</span><strong>{{ currentDateTime }}</strong></div>
+          <div class="rep__print-meta-row"><span>Filtros</span><strong>{{ filtrosAplicados }}</strong></div>
+          <div class="rep__print-meta-row"><span>Registros</span><strong>{{ displayRows.length }}</strong></div>
         </div>
       </div>
 
@@ -319,11 +331,17 @@ const exportExcel = () => {
             </tbody>
           </table>
         </div>
+
+        <div v-if="displayRows.length" class="rep__signature only-print">
+          <div class="rep__signature-line">
+            <div class="rep__signature-rule"></div>
+            <p class="rep__signature-name">{{ userFullName }}</p>
+            <p class="rep__signature-role">{{ userRole }} · Sistema Universitario</p>
+          </div>
+        </div>
       </div>
 
-      <div class="rep__print-foot only-print">
-        <p>Documento oficial emitido por el Sistema Académico · Confidencial</p>
-      </div>
+      <div class="rep__print-foot only-print" aria-hidden="true"></div>
     </AppCard>
       </div>
     </PageTransition>
@@ -450,33 +468,241 @@ const exportExcel = () => {
 .rep__print-head, .rep__print-foot { display: none; }
 
 @media print {
-  .rep__canvas {
+  @page {
+    size: A4 portrait;
+    margin: 1.4cm 1.2cm 1.6cm 1.2cm;
+    @bottom-left {
+      content: 'Documento oficial · Sistema Universitario · Confidencial';
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #64748b;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+    }
+    @bottom-right {
+      content: 'Página ' counter(page) ' de ' counter(pages);
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 8pt;
+      color: #0f172a;
+      font-weight: 600;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+    }
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  :deep(.no-print),
+  :deep(.app-shell__backdrop),
+  :deep(.app-sidebar),
+  :deep(.app-topbar),
+  :deep(.app-toast-stack) {
+    display: none !important;
+  }
+
+  :deep(.app-shell),
+  :deep(.app-shell__main),
+  :deep(.app-shell__content) {
+    display: block !important;
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  :deep(.rep__canvas) {
     border: 0 !important;
-    background: white !important;
+    background: #fff !important;
     box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
   }
+
   .rep__print-head {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    align-items: start;
+    border-bottom: 2.5px solid #1e293b;
+    padding: 0 0 12px;
+    margin-bottom: 16px;
+  }
+
+  .rep__print-brand {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    border-bottom: 2px solid black;
-    padding: 0 22px 14px;
+    align-items: center;
+    gap: 12px;
   }
-  .rep__print-foot {
-    display: block;
-    border-top: 1px solid #cbd5e1;
-    padding: 14px 22px;
-    text-align: center;
-    font-size: 0.75rem;
+
+  .rep__print-logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 16pt;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+    flex-shrink: 0;
+  }
+
+  .rep__print-badge {
+    display: inline-block;
+    font-size: 7.5pt;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: #6366f1;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .rep__print-head h1 {
+    margin: 0;
+    font-size: 18pt;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .rep__print-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 240px;
+    border-left: 1px solid #cbd5e1;
+    padding-left: 14px;
+  }
+
+  .rep__print-meta-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 8px;
+    font-size: 8.5pt;
+    align-items: baseline;
+  }
+
+  .rep__print-meta-row span {
     color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    font-size: 7pt;
   }
+
+  .rep__print-meta-row strong {
+    color: #0f172a;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .rep__body { padding: 0 !important; }
+
+  .rep__info-section h3 {
+    color: #0f172a !important;
+    font-size: 11pt;
+    border-bottom: 1.5px solid #6366f1;
+    padding-bottom: 4px;
+    margin: 16px 0 10px !important;
+  }
+
+  .rep__info-table {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+  }
+  .rep__info-table td { color: #0f172a !important; }
+
+  .rep__table-wrap {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    overflow: visible;
+  }
+
+  .rep__table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+    page-break-inside: auto;
+  }
+
+  .rep__table thead { display: table-header-group; }
+
+  .rep__table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
   .rep__table th {
-    background: #f1f5f9 !important;
-    color: black !important;
+    background: #1e293b !important;
+    color: #fff !important;
+    padding: 8px 10px !important;
+    font-size: 8pt !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .rep__table td,
-  .rep__info-table td {
-    color: black !important;
+
+  .rep__table td {
+    padding: 7px 10px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    background: #fff !important;
+  }
+
+  .rep__table tbody tr:nth-child(even) td {
+    background: #f8fafc !important;
+  }
+
+  .rep__table tbody tr:last-child td { border-bottom: 0 !important; }
+
+  .rep__signature {
+    margin-top: 36px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .rep__signature-line {
+    text-align: center;
+    width: 240px;
+  }
+
+  .rep__signature-rule {
+    height: 1px;
+    background: #0f172a;
+    margin-bottom: 6px;
+  }
+
+  .rep__signature-name {
+    margin: 0;
+    font-size: 10pt;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .rep__signature-role {
+    margin: 2px 0 0;
+    font-size: 8pt;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .rep__print-foot {
+    display: none !important;
   }
 }
 </style>

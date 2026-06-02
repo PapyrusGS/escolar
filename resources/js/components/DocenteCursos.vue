@@ -260,8 +260,14 @@ const handleLogout = async () => {
             <strong>{{ row.Nombre }}</strong>
           </div>
         </template>
+        <template #cell-ci="{ row }">
+          <span class="dc__ci">{{ row.CI }}</span>
+        </template>
         <template #cell-mail="{ row }">
           <span class="dc__mail"><Mail :size="12" /> {{ row.Correo }}</span>
+        </template>
+        <template #cell-date="{ row }">
+          <span class="dc__date"><Calendar :size="12" /> {{ formatDate(row.FechaInscripcion) }}</span>
         </template>
         <template #cell-nota="{ row }">
           <AppBadge v-if="row.EstadoNota" :variant="row.Aprobado ? 'success' : 'danger'" size="sm">
@@ -455,6 +461,27 @@ const handleLogout = async () => {
 }
 
 .dc__mail {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.dc__ci {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xs);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.dc__date {
   display: inline-flex;
   align-items: center;
   gap: 4px;

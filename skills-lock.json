@@ -13,6 +13,12 @@
       "skillPath": "skills/laravel-specialist/SKILL.md",
       "computedHash": "805be17bd59f759e2f2f2dcbd6bd205ca6678420a87b21da1c16e0793093615c"
     },
+    "pdf": {
+      "source": "openai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/pdf/SKILL.md",
+      "computedHash": "af1e0791f5356b6de053e6b97d7703fe0d7ea1997371b9023afd4720bebcf93f"
+    },
     "php-pro": {
       "source": "jeffallan/claude-skills",
       "sourceType": "github",

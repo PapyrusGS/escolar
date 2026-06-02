@@ -26,13 +26,13 @@ defineProps({
         </tr>
       </thead>
       <tbody v-if="rows.length > 0">
-        <tr v-for="row in rows" :key="row[rowKey] || row.id" :class="hoverable && 'app-table__row--hoverable'">
+        <tr v-for="(row, rowIndex) in rows" :key="row[rowKey] || row.id" :class="hoverable && 'app-table__row--hoverable'">
           <td
             v-for="col in columns"
             :key="col.key"
             :class="col.align && `app-table__td--${col.align}`"
           >
-            <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]">
+            <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="rowIndex">
               {{ row[col.key] }}
             </slot>
           </td>

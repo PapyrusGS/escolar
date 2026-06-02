@@ -146,7 +146,7 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->where('cursos.IdCurso', $params['IdCurso'])
             ->where('cursos_materias.IdDocente', $idDocente)
             ->distinct()
-            ->orderBy('estudiantes.Apellido1')
+            ->orderBy('Estudiante')
             ->get()->toArray();
     }
 
