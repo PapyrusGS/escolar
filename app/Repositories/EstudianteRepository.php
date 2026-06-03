@@ -68,6 +68,33 @@ class EstudianteRepository
     }
 
     /**
+     * RF05 - Cuenta las inscripciones activas del estudiante
+     */
+    public function contarInscripcionesActivas(int $idUsuario): int
+    {
+        $estudianteCarrera = $this->getModalidadEstudiante($idUsuario);
+
+        if (!$estudianteCarrera) {
+            return 0;
+        }
+
+        return DB::table('inscripciones')
+            ->where('IdEstudiante', $estudianteCarrera->IdEstudianteCarrera)
+            ->where('Estado', 1)
+            ->count();
+    }
+
+    /**
+     * RF05 - Obtiene el máximo de materias permitidas según la modalidad
+     */
+    public function getMaxMateriasModalidad(int $idModalidad): int
+    {
+        return (int) DB::table('modalidad')
+            ->where('IdModalidad', $idModalidad)
+            ->value('MaxMaterias');
+    }
+
+    /**
      * RF05 - Muestra las materias disponibles que corresponden al Pensum, la Modalidad 
      * del alumno y además valida que tenga los prerrequisitos aprobados.
      */
@@ -132,6 +159,8 @@ class EstudianteRepository
                 'materias.Nombre as Materia',
                 'materias.CodigoMateria',
                 'turnos.Nombre as Turno',
+                'turnos.HoraInicio',
+                'turnos.HoraFin',
                 'cursos_materias.FechaInicio',
                 'cursos_materias.FechaFin'
             )

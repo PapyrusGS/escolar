@@ -90,6 +90,24 @@ class EstudianteService
             return ['status' => false, 'message' => 'El curso-materia seleccionado no existe.', 'data' => []];
         }
 
+        // REGLA DE NEGOCIO: Validar límite de materias según modalidad
+        $estudianteCarrera = $this->estudianteRepo->getModalidadEstudiante($idUsuario);
+
+        if (!$estudianteCarrera) {
+            return ['status' => false, 'message' => 'No se encontró tu registro académico.', 'data' => []];
+        }
+
+        $maxMaterias = $this->estudianteRepo->getMaxMateriasModalidad($estudianteCarrera->IdModalidad);
+        $inscritasActivas = $this->estudianteRepo->contarInscripcionesActivas($idUsuario);
+
+        if ($inscritasActivas >= $maxMaterias) {
+            return [
+                'status' => false,
+                'message' => "Has alcanzado el límite de materias permitidas para tu modalidad (máximo $maxMaterias).",
+                'data' => []
+            ];
+        }
+
         // REGLA DE NEGOCIO: Evitar duplicidad o cruce de horarios
         $yaInscrito = $this->estudianteRepo->verificarCruceODuplicado(
             $idUsuario, 

@@ -229,7 +229,7 @@ const handleLogout = async () => {
             </header>
             <div class="im__card-body">
               <div class="im__info"><MapPin :size="14" /><span><strong>Aula:</strong> {{ m.Curso || m.Aula || '—' }}<template v-if="m.Piso"> (Piso {{ m.Piso }})</template></span></div>
-              <div class="im__info"><Clock :size="14" /><span><strong>Turno:</strong> {{ m.Turno || '—' }}</span></div>
+              <div class="im__info"><Clock :size="14" /><span><strong>Turno:</strong> {{ m.Turno || '—' }}<template v-if="m.HoraInicio"> ({{ m.HoraInicio.substring(0,5) }}–{{ m.HoraFin?.substring(0,5) }})</template></span></div>
               <div class="im__info"><Calendar :size="14" /><span><strong>Vigencia:</strong> {{ formatDate(m.FechaInicio) }} al {{ formatDate(m.FechaFin) }}</span></div>
             </div>
             <footer class="im__card-foot">
@@ -258,7 +258,7 @@ const handleLogout = async () => {
             <div>
               <h4>{{ selectedMateria.Materia }}</h4>
               <p><strong>Aula:</strong> {{ selectedMateria.Curso || selectedMateria.Aula || '—' }}<template v-if="selectedMateria.Piso"> (Piso {{ selectedMateria.Piso }})</template></p>
-              <p><strong>Turno:</strong> {{ selectedMateria.Turno || '—' }}</p>
+              <p><strong>Turno:</strong> {{ selectedMateria.Turno || '—' }}<template v-if="selectedMateria.HoraInicio"> ({{ selectedMateria.HoraInicio.substring(0,5) }}–{{ selectedMateria.HoraFin?.substring(0,5) }})</template></p>
               <p><strong>Vigencia:</strong> {{ formatDate(selectedMateria.FechaInicio) }} – {{ formatDate(selectedMateria.FechaFin) }}</p>
             </div>
           </div>
