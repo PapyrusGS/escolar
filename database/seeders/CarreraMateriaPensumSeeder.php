@@ -17,8 +17,9 @@ class CarreraMateriaPensumSeeder extends Seeder
         $idPensum = 1;  // Id del Pensum guardado
 
         // Ejecutamos tu consulta SQL adaptada a los métodos de Laravel
+        // Sistemas / Modular
         DB::statement("
-            INSERT INTO carreraMateriaPensum (IdCarrera, IdMateria, IdPensum, Semestre, FechaRegistro, Estado)
+            INSERT IGNORE INTO carreraMateriaPensum (IdCarrera, IdMateria, IdPensum, Semestre, FechaRegistro, Estado)
             SELECT 
                 :idCarrera, 
                 IdMateria, 
@@ -31,6 +32,23 @@ class CarreraMateriaPensumSeeder extends Seeder
         ", [
             'idCarrera' => $idCarrera,
             'idPensum' => $idPensum
+        ]);
+
+        // Sistemas / Semestral
+        DB::statement("
+            INSERT IGNORE INTO carreraMateriaPensum (IdCarrera, IdMateria, IdPensum, Semestre, FechaRegistro, Estado)
+            SELECT 
+                :idCarreraSem, 
+                IdMateria, 
+                :idPensumSem, 
+                CAST(SUBSTRING(CodigoMateria, 5, 1) AS UNSIGNED),
+                NOW(),
+                1
+            FROM materias 
+            WHERE IdMateria BETWEEN 1 AND 54
+        ", [
+            'idCarreraSem' => 1,
+            'idPensumSem' => 2,
         ]);
     }
 }
