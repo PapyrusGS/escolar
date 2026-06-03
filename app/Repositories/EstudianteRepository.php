@@ -81,6 +81,7 @@ class EstudianteRepository
         return DB::table('inscripciones')
             ->where('IdEstudiante', $estudianteCarrera->IdEstudianteCarrera)
             ->where('Estado', 1)
+            ->where('Aprobado', 0)
             ->count();
     }
 
@@ -192,6 +193,7 @@ class EstudianteRepository
             ->join('cursos_materias', 'inscripciones.IdCursoMateria', '=', 'cursos_materias.IdCursoMateria')
             ->where('inscripciones.IdEstudiante', $estudianteCarrera->IdEstudianteCarrera)
             ->where('inscripciones.Estado', 1)
+            ->where('inscripciones.Aprobado', 0)
             ->where(function ($query) use ($idMateria, $idTurno) {
                 $query->where('cursos_materias.IdMateria', $idMateria) // Misma Materia
                       ->orWhere('cursos_materias.IdTurno', $idTurno);  // Mismo Horario/Turno
