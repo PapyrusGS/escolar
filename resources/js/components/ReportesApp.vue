@@ -7,6 +7,7 @@ import PageTransition from './layout/PageTransition.vue';
 import AppButton from './ui/AppButton.vue';
 import AppCard from './ui/AppCard.vue';
 import AppSelect from './ui/AppSelect.vue';
+import AppInput from './ui/AppInput.vue';
 import AppSpinner from './ui/AppSpinner.vue';
 import AppEmptyState from './ui/AppEmptyState.vue';
 import { toast } from '../lib/toast.js';
@@ -42,6 +43,10 @@ const filtrosAplicados = computed(() => {
   for (const f of filtrosActuales.value) {
     const v = filterValues.value[f.nombre];
     if (v === '' || v == null) continue;
+    if (f.tipo === 'date') {
+      parts.push(`${f.label}: ${v}`);
+      continue;
+    }
     const opt = (filterOptions.value[f.nombre] || []).find((o) => String(o.Id ?? o.IdUsuario ?? o.IdCurso) === String(v));
     const label = opt ? formatOption(opt, f.endpoint) : v;
     parts.push(`${f.label}: ${label}`);
@@ -54,19 +59,38 @@ const currentDateTime = computed(() =>
   generatedAt.value.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 );
 
-const isInfoAlumno = computed(() => selectedTipo.value === 'info_alumno');
+const isStructuredReport = computed(() =>
+  ['info_alumno', 'historial_alumno', 'historial_docente'].includes(selectedTipo.value)
+);
 
 const reportDataLength = computed(() => {
-  if (isInfoAlumno.value && reportData.value?.materias) return reportData.value.materias.length;
+  if (isStructuredReport.value && reportData.value?.materias) return reportData.value.materias.length;
   if (Array.isArray(reportData.value)) return reportData.value.length;
   return 0;
 });
 
 const displayRows = computed(() => {
-  if (isInfoAlumno.value && reportData.value?.materias) return reportData.value.materias;
+  if (isStructuredReport.value && reportData.value?.materias) return reportData.value.materias;
   if (Array.isArray(reportData.value)) return reportData.value;
   return [];
 });
+
+const currentCourseBlock = ref(null);
+const groupedByCourse = computed(() => {
+  const rows = displayRows.value;
+  if (!rows.length || !rows[0].Curso) return null;
+  const groups = {};
+  for (const row of rows) {
+    const key = row.Curso || 'Sin curso';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(row);
+  }
+  return groups;
+});
+
+const showCourseBlocks = computed(() =>
+  ['notas_todos_alumnos', 'notas_por_fecha'].includes(selectedTipo.value) && groupedByCourse.value
+);
 
 const columnas = computed(() => {
   if (!displayRows.value.length) return [];
@@ -87,9 +111,20 @@ const columnas = computed(() => {
     Fecha: 'Fecha',
     Aprobado: 'Aprobado',
     NotaEstado: 'Estado Nota',
+    Prerrequisito: 'Prerrequisito',
+    Aula: 'Aula',
+    Piso: 'Piso',
+    Turno: 'Turno',
+    FechaInicio: 'Fecha Inicio',
+    FechaFin: 'Fecha Fin',
+    FechaInscripcion: 'Fecha Inscripción',
   };
   return keys.map((k) => ({ key: k, label: map[k] || k }));
 });
+
+const blockColumns = computed(() =>
+  columnas.value.filter(c => !['Curso', 'CodigoMateria', 'Materia', 'Docente'].includes(c.key))
+);
 
 onMounted(async () => {
   if (!currentUser.value) {
@@ -123,6 +158,7 @@ const onTipoChange = async () => {
   filterValues.value = {};
   filtrosActuales.value = [];
   filterOptions.value = {};
+  currentCourseBlock.value = null;
   if (!selectedTipo.value) return;
   await loadFiltros();
   await fetchReportData();
@@ -134,7 +170,9 @@ const loadFiltros = async () => {
     filtrosActuales.value = data.data || [];
     for (const f of filtrosActuales.value) {
       filterValues.value[f.nombre] = '';
-      await loadFilterOptions(f);
+      if (f.tipo === 'select' || !f.tipo) {
+        if (f.endpoint) await loadFilterOptions(f);
+      }
     }
   } catch (err) {
     console.error(err);
@@ -172,9 +210,9 @@ const formatOption = (opt, endpoint) => {
     return `${opt.Nombre1} ${opt.Apellido1}${opt.CI ? ' - CI: ' + opt.CI : ''}`;
   }
   if (['cursos', 'cursos_por_docente'].includes(endpoint)) {
-    return `${opt.Nombre || opt.Aula}${opt.Aula ? ' (' + opt.Aula + ')' : ''}`;
+    return `Aula ${opt.Aula}`;
   }
-  if (endpoint === 'materias') return `${opt.Nombre} (${opt.CodigoMateria})`;
+  if (endpoint === 'materias') return `${opt.Nombre} (${opt.CodigoMateria})${opt.Carrera ? ' - ' + opt.Carrera : ''}`;
   return opt.Nombre || opt.Aula || '';
 };
 
@@ -184,6 +222,11 @@ const getCellValue = (row, col) => {
   if (col.key === 'NotaEstado') return v ? 'Registrada' : 'Sin nota';
   return v ?? '';
 };
+
+const getPersonalTitle = computed(() => {
+  if (selectedTipo.value === 'historial_docente') return 'Datos personales del docente';
+  return 'Datos personales del alumno';
+});
 
 const printPDF = () => {
   if (!displayRows.value.length) {
@@ -200,10 +243,18 @@ const exportExcel = () => {
     return;
   }
   let csv = '\uFEFF';
-  csv += columnas.value.map((c) => `"${c.label}"`).join(',') + '\n';
-  displayRows.value.forEach((row) => {
+  const cols = showCourseBlocks.value
+    ? [{ key: 'Curso', label: 'Curso' }, ...blockColumns.value]
+    : columnas.value;
+  csv += cols.map((c) => `"${c.label}"`).join(',') + '\n';
+  const rows = showCourseBlocks.value
+    ? Object.entries(groupedByCourse.value || {}).flatMap(([curso, items]) =>
+        items.map(row => ({ Curso: curso, ...row }))
+      )
+    : displayRows.value;
+  rows.forEach((row) => {
     csv +=
-      columnas.value
+      cols
         .map((c) => `"${String(getCellValue(row, c) || '').replace(/"/g, '""')}"`)
         .join(',') + '\n';
   });
@@ -242,18 +293,26 @@ const exportExcel = () => {
           @update:modelValue="onTipoChange"
         />
 
-        <AppSelect
-          v-for="filtro in filtrosActuales"
-          :key="filtro.nombre"
-          v-model="filterValues[filtro.nombre]"
-          :label="filtro.label"
-          :options="(filterOptions[filtro.nombre] || []).map((opt) => ({
-            Id: opt.Id || opt.IdUsuario || opt.IdCurso,
-            Nombre: formatOption(opt, filtro.endpoint),
-          }))"
-          placeholder="Todos"
-          @update:modelValue="fetchReportData"
-        />
+        <template v-for="filtro in filtrosActuales" :key="filtro.nombre">
+          <AppSelect
+            v-if="filtro.tipo === 'select' || !filtro.tipo"
+            v-model="filterValues[filtro.nombre]"
+            :label="filtro.label"
+            :options="(filterOptions[filtro.nombre] || []).map((opt) => ({
+              Id: opt.Id || opt.IdUsuario || opt.IdCurso || opt.IdMateria || opt.IdCarrera,
+              Nombre: formatOption(opt, filtro.endpoint),
+            }))"
+            placeholder="Todos"
+            @update:modelValue="fetchReportData"
+          />
+          <AppInput
+            v-else-if="filtro.tipo === 'date'"
+            v-model="filterValues[filtro.nombre]"
+            type="date"
+            :label="filtro.label"
+            @update:modelValue="fetchReportData"
+          />
+        </template>
 
         <div class="rep__actions">
           <AppButton variant="primary" :icon="FileText" :disabled="!displayRows.length" @click="printPDF">
@@ -293,19 +352,19 @@ const exportExcel = () => {
       </div>
 
       <div class="rep__body">
-        <div v-if="isInfoAlumno && reportData.datos_personales" class="rep__info-section">
-          <h3>Datos personales del alumno</h3>
+        <div v-if="isStructuredReport && reportData.datos_personales" class="rep__info-section">
+          <h3>{{ getPersonalTitle }}</h3>
           <table class="rep__info-table">
             <tbody>
               <tr><td><strong>Nombre completo</strong></td><td>{{ reportData.datos_personales.Nombre1 }} {{ reportData.datos_personales.Nombre2 }} {{ reportData.datos_personales.Apellido1 }} {{ reportData.datos_personales.Apellido2 }}</td></tr>
               <tr><td><strong>CI</strong></td><td>{{ reportData.datos_personales.CI }}</td></tr>
-              <tr><td><strong>Teléfono</strong></td><td>{{ reportData.datos_personales.Telefono }}</td></tr>
+              <tr v-if="reportData.datos_personales.Telefono"><td><strong>Teléfono</strong></td><td>{{ reportData.datos_personales.Telefono }}</td></tr>
               <tr><td><strong>Correo</strong></td><td>{{ reportData.datos_personales.Correo }}</td></tr>
-              <tr><td><strong>Carrera</strong></td><td>{{ reportData.datos_personales.Carrera || 'Sin asignar' }}</td></tr>
-              <tr><td><strong>Modalidad</strong></td><td>{{ reportData.datos_personales.Modalidad || 'Sin asignar' }}</td></tr>
+              <tr v-if="reportData.datos_personales.Carrera"><td><strong>Carrera</strong></td><td>{{ reportData.datos_personales.Carrera }}</td></tr>
+              <tr v-if="reportData.datos_personales.Modalidad"><td><strong>Modalidad</strong></td><td>{{ reportData.datos_personales.Modalidad }}</td></tr>
             </tbody>
           </table>
-          <h3 class="rep__info-h3">Materias y notas</h3>
+          <h3 class="rep__info-h3">Materias registradas</h3>
         </div>
 
         <div v-if="reportDataLength === 0" class="rep__empty">
@@ -313,6 +372,36 @@ const exportExcel = () => {
             title="Sin datos"
             description="No se encontraron registros para este reporte."
           />
+        </div>
+
+        <div v-else-if="showCourseBlocks" class="rep__blocks">
+          <h3 class="rep__materia-heading">{{ displayRows[0]?.Materia || 'Materia' }}</h3>
+          <div
+            v-for="(rows, curso) in groupedByCourse"
+            :key="curso"
+            class="rep__block"
+          >
+            <div class="rep__block-head">
+              <h3>{{ curso }}</h3>
+              <span class="rep__block-count">{{ rows.length }} registro(s)</span>
+            </div>
+            <div class="rep__table-wrap">
+              <table class="rep__table">
+                <thead>
+                  <tr>
+                    <th v-for="col in blockColumns" :key="col.key">{{ col.label }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, idx) in rows" :key="idx">
+                    <td v-for="col in blockColumns" :key="col.key">
+                      {{ getCellValue(row, col) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div v-else class="rep__table-wrap">
@@ -398,6 +487,42 @@ const exportExcel = () => {
 .rep__body { padding: 22px; }
 
 .rep__empty { padding: 32px 0; }
+
+.rep__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rep__materia-heading {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-primary-dark);
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 6px;
+}
+
+.rep__block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.rep__block-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.rep__block-count {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
 
 .rep__table-wrap {
   overflow-x: auto;
@@ -668,6 +793,30 @@ const exportExcel = () => {
   }
 
   .rep__table tbody tr:last-child td { border-bottom: 0 !important; }
+
+  .rep__blocks {
+    display: block !important;
+  }
+
+  .rep__block {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+  }
+
+  .rep__materia-heading {
+    color: #0f172a !important;
+    font-size: 13pt;
+    border-bottom: 2px solid #6366f1;
+    padding-bottom: 6px;
+    margin: 18px 0 12px;
+  }
+
+  .rep__block-head h3 {
+    color: #0f172a !important;
+    font-size: 11pt;
+    border-bottom: 1.5px solid #6366f1;
+    padding-bottom: 4px;
+  }
 
   .rep__signature {
     margin-top: 36px;

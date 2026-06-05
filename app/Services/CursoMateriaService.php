@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Repositories\CarreraRepository;
 use App\Repositories\CursoMateriaRepository;
 use App\Repositories\CursoRepository;
 use App\Repositories\MateriaRepository;
@@ -12,6 +13,7 @@ use RuntimeException;
 class CursoMateriaService
 {
     public function __construct(
+        private readonly CarreraRepository $carreraRepository,
         private readonly CursoMateriaRepository $cursoMateriaRepository,
         private readonly CursoRepository $cursoRepository,
         private readonly MateriaRepository $materiaRepository,
@@ -72,6 +74,10 @@ class CursoMateriaService
             ->all();
 
         return [
+            'carreras' => collect($this->carreraRepository->activeAll())->map(fn($c) => [
+                'IdCarrera' => $c->IdCarrera,
+                'Nombre' => $c->Nombre,
+            ])->all(),
             'cursos' => collect($this->cursoRepository->activeAll())->map(fn($c) => [
                 'IdCurso' => $c->IdCurso,
                 'Piso' => $c->Piso,

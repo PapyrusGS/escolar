@@ -154,7 +154,7 @@ class EstudianteRepository
             })
             ->select(
                 'cursos_materias.IdCursoMateria',
-                'cursos.Nombre as Curso',
+                DB::raw("COALESCE(cursos.Nombre, cursos.Aula) as Curso"),
                 'cursos.Aula',
                 'cursos.Piso',
                 'materias.Nombre as Materia',

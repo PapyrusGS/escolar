@@ -58,8 +58,7 @@ class EstudianteReporteStrategy implements ReporteStrategyInterface
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
-                'cursos.Nombre as Curso',
-                'materias.Nombre as Materia',
+                'materias.Nombre as Curso',
                 'notas.Nota',
                 'inscripciones.Aprobado',
                 'inscripciones.Fecha'
@@ -80,8 +79,7 @@ class EstudianteReporteStrategy implements ReporteStrategyInterface
             ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
                 'materias.CodigoMateria',
-                'materias.Nombre as Materia',
-                'cursos.Nombre as Curso',
+                'materias.Nombre as Curso',
                 'notas.Nota'
             )
             ->where('EstudianteCarrera.IdUsuario', $idEstudiante)
@@ -98,8 +96,7 @@ class EstudianteReporteStrategy implements ReporteStrategyInterface
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->select(
                 'materias.CodigoMateria',
-                'materias.Nombre as Materia',
-                'cursos.Nombre as Curso',
+                'materias.Nombre as Curso',
                 'inscripciones.Fecha'
             )
             ->where('EstudianteCarrera.IdUsuario', $idEstudiante)

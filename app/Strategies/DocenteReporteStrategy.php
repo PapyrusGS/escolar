@@ -80,15 +80,13 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
-                'cursos.Nombre as Curso',
-                'materias.Nombre as Materia',
+                'materias.Nombre as Curso',
                 'notas.Nota',
                 DB::raw("CASE WHEN notas.Nota IS NOT NULL THEN 'Registrada' ELSE 'Sin nota' END as NotaEstado"),
                 'inscripciones.Aprobado'
             )
             ->where('cursos_materias.IdDocente', $idDocente)
             ->where('EstudianteCarrera.IdUsuario', $params['IdEstudiante'])
-            ->orderBy('cursos.Nombre')
             ->orderBy('materias.Nombre')
             ->get()->toArray();
     }
@@ -107,9 +105,8 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
-                'cursos.Nombre as Curso',
+                'materias.Nombre as Curso',
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
-                'materias.Nombre as Materia',
                 'notas.Nota',
                 DB::raw("CASE WHEN notas.Nota IS NOT NULL THEN 'Registrada' ELSE 'Sin nota' END as NotaEstado"),
                 'inscripciones.Aprobado'
@@ -132,9 +129,10 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->join('usuarios as estudiantes', 'EstudianteCarrera.IdUsuario', '=', 'estudiantes.IdUsuario')
             ->join('cursos_materias', 'inscripciones.IdCursoMateria', '=', 'cursos_materias.IdCursoMateria')
             ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
+            ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->leftJoin('notas', 'inscripciones.IdInscripcion', '=', 'notas.IdInscripcion')
             ->select(
-                'cursos.Nombre as Curso',
+                'materias.Nombre as Curso',
                 'estudiantes.CI',
                 DB::raw("CONCAT(estudiantes.Nombre1, ' ', estudiantes.Apellido1) as Estudiante"),
                 'estudiantes.Correo',
@@ -157,8 +155,7 @@ class DocenteReporteStrategy implements ReporteStrategyInterface
             ->join('materias', 'cursos_materias.IdMateria', '=', 'materias.IdMateria')
             ->select(
                 'materias.CodigoMateria',
-                'materias.Nombre as Materia',
-                'cursos.Nombre as Curso'
+                'materias.Nombre as Curso'
             )
             ->where('cursos_materias.IdDocente', $idDocente)
             ->orderBy('materias.Nombre')

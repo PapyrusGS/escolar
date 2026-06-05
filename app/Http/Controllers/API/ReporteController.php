@@ -96,8 +96,14 @@ class ReporteController extends Controller
         try {
             $data = match ($tipo) {
                 'carreras' => \DB::table('carreras')->where('Estado', true)->get(['IdCarrera', 'Nombre']),
-                'cursos' => \DB::table('cursos')->where('Estado', true)->get(['IdCurso', 'Nombre', 'Aula']),
-                'materias' => \DB::table('materias')->where('Estado', true)->get(['IdMateria', 'CodigoMateria', 'Nombre']),
+                'cursos' => \DB::table('cursos')->where('Estado', true)->get(['IdCurso', 'Aula']),
+                'materias' => \DB::table('materias')
+                    ->leftJoin('carreraMateriaPensum', 'materias.IdMateria', '=', 'carreraMateriaPensum.IdMateria')
+                    ->leftJoin('carreras', 'carreraMateriaPensum.IdCarrera', '=', 'carreras.IdCarrera')
+                    ->where('materias.Estado', true)
+                    ->select('materias.IdMateria', 'materias.CodigoMateria', 'materias.Nombre', 'carreras.Nombre as Carrera')
+                    ->distinct()
+                    ->get(),
                 'docentes' => \DB::table('usuarios')->where('IdRol', 2)->where('Estado', true)->get(['IdUsuario', 'Nombre1', 'Apellido1']),
                 'estudiantes' => \DB::table('usuarios')->where('IdRol', 3)->where('Estado', true)->get(['IdUsuario', 'Nombre1', 'Apellido1', 'CI']),
                 'cursos_por_docente' => $this->getCursosPorDocente($request),
@@ -125,7 +131,7 @@ class ReporteController extends Controller
             ->join('cursos', 'cursos_materias.IdCurso', '=', 'cursos.IdCurso')
             ->where('cursos_materias.IdDocente', $user->IdUsuario)
             ->where('cursos.Estado', true)
-            ->select('cursos.IdCurso', 'cursos.Nombre', 'cursos.Aula')
+            ->select('cursos.IdCurso', 'cursos.Aula')
             ->distinct()
             ->get()
             ->toArray();
