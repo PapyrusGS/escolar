@@ -99,8 +99,7 @@ class AdminReporteStrategy implements ReporteStrategyInterface
                 'materias.CodigoMateria',
                 'materias.Nombre as Materia',
                 'previa.Nombre as Prerrequisito',
-                DB::raw("'' as Pensum"),
-                DB::raw("0 as Semestre")
+                DB::raw("CONCAT('Semestre ', LEFT(SUBSTRING_INDEX(materias.CodigoMateria, '-', -1), 1)) as Semestre")
             )
             ->where('materias.Estado', true);
 
